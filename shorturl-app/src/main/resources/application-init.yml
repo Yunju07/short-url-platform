@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: shorturl-app
+  datasource:
+    url: jdbc:mysql://db:3306/shorturl
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update

@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shorturl-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./compose/app.env
+    depends_on:
+      - db
+    networks:
+      - shorturl-net
+
+  db:
+    image: mysql:8.0
+    container_name: shorturl-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shorturl
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - shorturl-net
+
+networks:
+  shorturl-net:
+
+volumes:
+  db-data:
