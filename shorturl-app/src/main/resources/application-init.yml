@@ -1,10 +1,22 @@
 spring:
   application:
     name: shorturl-app
+
   datasource:
     url: jdbc:mysql://db:3306/shorturl
     username: root
     password: root
+
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000
