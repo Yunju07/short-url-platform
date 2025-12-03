@@ -18,6 +18,8 @@ services:
   db:
     image: mysql:8.0
     container_name: shorturl-db
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shorturl
