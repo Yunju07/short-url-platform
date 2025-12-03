@@ -7,12 +7,10 @@ import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlCreateResponse;
 import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlDetailResponse;
 import com.yunju.shorturl_app.domain.shortUrl.model.ShortUrl;
 import com.yunju.shorturl_app.domain.shortUrl.repository.ShortUrlRepository;
-import com.yunju.shorturl_app.domain.statistics.service.ShortUrlClickLogService;
 import com.yunju.shorturl_app.global.apiPayload.code.status.ErrorStatus;
 import com.yunju.shorturl_app.global.apiPayload.exception.CustomApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +26,8 @@ public class ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortUrlCacheRepository shortUrlCacheRepository;
-    private final ShortUrlClickLogService shortUrlClickLogService;
+    private final ShortUrlClickAsyncHandler clickAsyncHandler;
+
 
     private static final Long DEFAULT_TTL = 2592000L; // 30일
     private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -80,12 +79,11 @@ public class ShortUrlService {
         );
     }
 
-    @Transactional
     public String handleRedirect(String shortKey, String userAgent, String referer) {
 
         String originalUrl = getOriginalUrl(shortKey);
 
-        asyncHandleClick(shortKey, userAgent, referer);
+        clickAsyncHandler.handleClick(shortKey, userAgent, referer);
 
         return originalUrl;
     }
@@ -142,7 +140,7 @@ public class ShortUrlService {
                 throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
             }
 
-            log.info("[Cache HIT] shortKey={}, originalUrl={}", shortKey, cache.getOriginalUrl());
+            //log.info("[Cache HIT] shortKey={}, originalUrl={}", shortKey, cache.getOriginalUrl());
             return cache.getOriginalUrl();
         }
 
@@ -151,7 +149,7 @@ public class ShortUrlService {
                 .orElseThrow(() -> new CustomApiException(ErrorStatus.SHORT_URL_NOT_FOUND));
 
         if (shortUrl.getExpiredAt().isBefore(LocalDateTime.now())) {
-            log.warn("[Cache MISS] shortKey={}, reason=EXPIRED, fallback=DB", shortKey);
+            //log.warn("[Cache MISS] shortKey={}, reason=EXPIRED, fallback=DB", shortKey);
             throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
         }
 
@@ -163,20 +161,20 @@ public class ShortUrlService {
         return shortUrl.getOriginalUrl();
     }
 
-    @Async
-    @Transactional
-    public void asyncHandleClick(String shortKey, String userAgent, String referer) {
-
-        ShortUrl shortUrl = shortUrlRepository.findByShortKey(shortKey)
-                .orElse(null);
-
-        // TODO: 추후 에러 추적/보강 전략 필요
-        if (shortUrl == null) return;
-
-        LocalDateTime clickTime = LocalDateTime.now();
-
-        shortUrl.increaseClick(clickTime);
-
-        shortUrlClickLogService.recordClick(shortUrl, userAgent, referer, clickTime);
-    }
+//    @Async
+//    @Transactional
+//    public void asyncHandleClick(String shortKey, String userAgent, String referer) {
+//
+//        ShortUrl shortUrl = shortUrlRepository.findByShortKey(shortKey)
+//                .orElse(null);
+//
+//        // TODO: 추후 에러 추적/보강 전략 필요
+//        if (shortUrl == null) return;
+//
+//        LocalDateTime clickTime = LocalDateTime.now();
+//
+//        shortUrl.increaseClick(clickTime);
+//
+//        shortUrlClickLogService.recordClick(shortUrl, userAgent, referer, clickTime);
+//    }
 }

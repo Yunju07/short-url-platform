@@ -13,3 +13,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+  data:
+    redis:
+      host: shorturl-redis
+      port: 6379
+      timeout: 2000
