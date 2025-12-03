@@ -6,7 +6,6 @@ import com.yunju.shorturl_app.domain.statistics.repository.ShortUrlClickLogRepos
 import com.yunju.shorturl_app.domain.statistics.util.DeviceTypeParser;
 import com.yunju.shorturl_app.global.enums.DeviceType;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,7 +16,6 @@ public class ShortUrlClickLogService {
 
     private final ShortUrlClickLogRepository clickLogRepository;
 
-    @Async
     public void recordClick(ShortUrl shortUrl, String userAgent, String referer, LocalDateTime clickTime) {
         DeviceType deviceType = DeviceTypeParser.parse(userAgent);
 
