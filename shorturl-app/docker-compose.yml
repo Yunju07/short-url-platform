@@ -11,30 +11,79 @@ services:
     env_file:
       - ./compose/app.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     networks:
       - shorturl-net
 
   db:
     image: mysql:8.0
     container_name: shorturl-db
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shorturl
+      MYSQL_USER: shorturl
+      MYSQL_PASSWORD: shorturl
+    ports:
+      - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
     networks:
       - shorturl-net
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7
     container_name: shorturl-redis
+    command: [
+      "redis-server",
+      "--appendonly yes",
+      "--maxmemory 256mb",
+      "--maxmemory-policy allkeys-lru"
+    ]
     ports:
       - "6379:6379"
     networks:
       - shorturl-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: shorturl-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@shorturl-kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://shorturl-kafka:29092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      KAFKA_CREATE_TOPICS: "shorturl.click-log:3:1, shorturl.click-log-retry:3:1, shorturl.click-log-dlt:3:1"
+      CLUSTER_ID: "4LNOwpo_Q-u48ezVwW0Bow"
+    networks:
+      - shorturl-net
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/kafka/29092" ] # HEALTHCHECK FIX
+      interval: 10s
+      timeout: 5s
 
 networks:
   shorturl-net:
