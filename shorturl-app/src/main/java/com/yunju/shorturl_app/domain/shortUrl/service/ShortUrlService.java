@@ -9,8 +9,10 @@ import com.yunju.shorturl_app.domain.shortUrl.model.ShortUrl;
 import com.yunju.shorturl_app.domain.shortUrl.repository.ShortUrlRepository;
 import com.yunju.shorturl_app.global.apiPayload.code.status.ErrorStatus;
 import com.yunju.shorturl_app.global.apiPayload.exception.CustomApiException;
+import com.yunju.shorturl_app.global.event.ClickEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +27,8 @@ import java.util.Random;
 public class ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
-    private final ShortUrlCache shortUrlCache;   // 인터페이스만 의존하도록 변경
-    private final ShortUrlClickAsyncHandler clickAsyncHandler;
+    private final ShortUrlCache shortUrlCache;
+    private final ClickEventProducer clickEventProducer;
 
     private static final Long DEFAULT_TTL = 2592000L; // 30일
     private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -78,11 +80,11 @@ public class ShortUrlService {
         );
     }
 
-    public String handleRedirect(String shortKey, String userAgent, String referer) {
+    public String handleRedirect(String shortKey, String userAgent, String referrer) {
 
         String originalUrl = getOriginalUrl(shortKey);
 
-        clickAsyncHandler.handleClick(shortKey, userAgent, referer);
+        clickEventProducer.sendClickEvent(shortKey, userAgent, referrer);
 
         return originalUrl;
     }

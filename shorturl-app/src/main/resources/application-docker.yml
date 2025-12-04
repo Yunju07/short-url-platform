@@ -28,13 +28,14 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.value.default.type: com.yunju.shorturl_app.domain.clicklog.dto.ClickLogMessage
     producer:
       bootstrap-servers: shorturl-kafka:29092
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     listener:
       ack-mode: BATCH
-      concurrency: 3
+      concurrency: 1

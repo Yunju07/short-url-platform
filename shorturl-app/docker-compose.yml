@@ -47,9 +47,9 @@ services:
     container_name: shorturl-redis
     command: [
       "redis-server",
-      "--appendonly yes",
-      "--maxmemory 256mb",
-      "--maxmemory-policy allkeys-lru"
+      "--appendonly", "yes",
+      "--maxmemory", "256mb",
+      "--maxmemory-policy", "allkeys-lru"
     ]
     ports:
       - "6379:6379"
@@ -61,29 +61,58 @@ services:
       timeout: 3s
       retries: 10
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: shorturl-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - shorturl-net
+
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: shorturl-kafka
+    depends_on:
+      - zookeeper
     ports:
       - "9092:9092"
       - "29092:29092"
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@shorturl-kafka:9093'
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://shorturl-kafka:29092'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
-      KAFKA_CREATE_TOPICS: "shorturl.click-log:3:1, shorturl.click-log-retry:3:1, shorturl.click-log-dlt:3:1"
-      CLUSTER_ID: "4LNOwpo_Q-u48ezVwW0Bow"
-    networks:
-      - shorturl-net
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka:29092
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 6
+
+      KAFKA_CREATE_TOPICS: "shorturl.click-log:3:1"
+
     healthcheck:
-      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/kafka/29092" ] # HEALTHCHECK FIX
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server=shorturl-kafka:29092" ]
       interval: 10s
       timeout: 5s
+      retries: 10
+
+    networks:
+      - shorturl-net
+
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9000:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: shorturl-kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: shorturl-zookeeper:2181
+    depends_on:
+      - kafka
+    networks:
+      - shorturl-net
 
 networks:
   shorturl-net:

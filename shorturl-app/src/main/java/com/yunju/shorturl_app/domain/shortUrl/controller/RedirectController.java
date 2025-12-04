@@ -19,12 +19,12 @@ public class RedirectController {
             HttpServletRequest request
     ) {
         String userAgent = request.getHeader("User-Agent");
-        String referer = request.getHeader("Referer");
+        String referrer = request.getHeader("Referer");
 
         String originalUrl = shortUrlService.handleRedirect(
                 shortKey,
                 userAgent,
-                referer
+                referrer
         );
 
         return ResponseEntity.status(302)
