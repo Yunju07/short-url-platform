@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit;
 @Repository
 @RequiredArgsConstructor
 public class ShortUrlCacheRepository {
-
     private static final String KEY_PREFIX = "shorturl:";
+    private static final long EXPIRED_BUFFER_SECONDS = 60;
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
@@ -24,9 +24,9 @@ public class ShortUrlCacheRepository {
         long ttlSeconds = value.getExpireAt() - nowEpoch;
 
         if (ttlSeconds <= 0) {
-            delete(shortKey);
-            return;
+            ttlSeconds = 0;
         }
+        ttlSeconds += EXPIRED_BUFFER_SECONDS;
 
         String key = KEY_PREFIX + shortKey;
 

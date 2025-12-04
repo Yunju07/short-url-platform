@@ -28,7 +28,6 @@ public class ShortUrlService {
     private final ShortUrlCacheRepository shortUrlCacheRepository;
     private final ShortUrlClickAsyncHandler clickAsyncHandler;
 
-
     private static final Long DEFAULT_TTL = 2592000L; // 30일
     private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int SHORT_KEY_LENGTH = 6;
@@ -136,7 +135,6 @@ public class ShortUrlService {
 
             long now = Instant.now().getEpochSecond();
             if (cache.getExpireAt() <= now) {
-                shortUrlCacheRepository.delete(shortKey);
                 throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
             }
 
