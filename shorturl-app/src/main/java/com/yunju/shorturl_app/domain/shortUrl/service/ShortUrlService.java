@@ -135,11 +135,10 @@ public class ShortUrlService {
 
             long now = Instant.now().getEpochSecond();
             if (cache.getExpireAt() <= now) {
-                shortUrlCacheRepository.delete(shortKey);
                 throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
             }
 
-            //log.info("[Cache HIT] shortKey={}, originalUrl={}", shortKey, cache.getOriginalUrl());
+            log.info("[Cache HIT] shortKey={}, originalUrl={}", shortKey, cache.getOriginalUrl());
             return cache.getOriginalUrl();
         }
 
