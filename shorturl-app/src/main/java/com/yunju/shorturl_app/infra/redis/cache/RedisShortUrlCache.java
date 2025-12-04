@@ -1,7 +1,9 @@
-package com.yunju.shorturl_app.domain.shortUrl.cache;
+package com.yunju.shorturl_app.infra.redis.cache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCache;
+import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCacheValue;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -12,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 @Repository
 @RequiredArgsConstructor
-public class ShortUrlCacheRepository {
+public class RedisShortUrlCache implements ShortUrlCache {
     private static final String KEY_PREFIX = "shorturl:";
     private static final long EXPIRED_BUFFER_SECONDS = 60;
 

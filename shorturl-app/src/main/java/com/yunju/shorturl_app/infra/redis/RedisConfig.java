@@ -1,4 +1,4 @@
-package com.yunju.shorturl_app.global.config;
+package com.yunju.shorturl_app.infra.redis;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

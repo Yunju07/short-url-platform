@@ -1,6 +1,6 @@
 package com.yunju.shorturl_app.domain.shortUrl.service;
 
-import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCacheRepository;
+import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCache;
 import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCacheValue;
 import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlCreateRequest;
 import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlCreateResponse;
@@ -25,7 +25,7 @@ import java.util.Random;
 public class ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
-    private final ShortUrlCacheRepository shortUrlCacheRepository;
+    private final ShortUrlCache shortUrlCache;   // 인터페이스만 의존하도록 변경
     private final ShortUrlClickAsyncHandler clickAsyncHandler;
 
     private static final Long DEFAULT_TTL = 2592000L; // 30일
@@ -123,11 +123,11 @@ public class ShortUrlService {
 
     private void cacheShortUrl(ShortUrl url) {
         ShortUrlCacheValue cacheValue = ShortUrlCacheValue.from(url);
-        shortUrlCacheRepository.save(url.getShortKey(), cacheValue);
+        shortUrlCache.save(url.getShortKey(), cacheValue);
     }
 
     private String getOriginalUrl(String shortKey) {
-        Optional<ShortUrlCacheValue> cacheOpt = shortUrlCacheRepository.findByShortKey(shortKey);
+        Optional<ShortUrlCacheValue> cacheOpt = shortUrlCache.findByShortKey(shortKey);
 
         // 캐시 Hit
         if (cacheOpt.isPresent()) {
