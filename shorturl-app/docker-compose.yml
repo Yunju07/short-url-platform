@@ -11,28 +11,106 @@ services:
     env_file:
       - ./compose/app.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     networks:
       - shorturl-net
 
   db:
     image: mysql:8.0
     container_name: shorturl-db
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shorturl
+      MYSQL_USER: shorturl
+      MYSQL_PASSWORD: shorturl
+    ports:
+      - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
     networks:
       - shorturl-net
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7
     container_name: shorturl-redis
+    command: [
+      "redis-server",
+      "--appendonly", "yes",
+      "--maxmemory", "256mb",
+      "--maxmemory-policy", "allkeys-lru"
+    ]
     ports:
       - "6379:6379"
+    networks:
+      - shorturl-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: shorturl-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - shorturl-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: shorturl-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka:29092
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 6
+
+      KAFKA_CREATE_TOPICS: "shorturl.click-log:3:1"
+
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server=shorturl-kafka:29092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - shorturl-net
+
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9000:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: shorturl-kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: shorturl-zookeeper:2181
+    depends_on:
+      - kafka
     networks:
       - shorturl-net
 

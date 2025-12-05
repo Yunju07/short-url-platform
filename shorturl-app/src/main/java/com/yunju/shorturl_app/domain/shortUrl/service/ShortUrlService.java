@@ -1,6 +1,6 @@
 package com.yunju.shorturl_app.domain.shortUrl.service;
 
-import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCacheRepository;
+import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCache;
 import com.yunju.shorturl_app.domain.shortUrl.cache.ShortUrlCacheValue;
 import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlCreateRequest;
 import com.yunju.shorturl_app.domain.shortUrl.dto.ShortUrlCreateResponse;
@@ -9,8 +9,10 @@ import com.yunju.shorturl_app.domain.shortUrl.model.ShortUrl;
 import com.yunju.shorturl_app.domain.shortUrl.repository.ShortUrlRepository;
 import com.yunju.shorturl_app.global.apiPayload.code.status.ErrorStatus;
 import com.yunju.shorturl_app.global.apiPayload.exception.CustomApiException;
+import com.yunju.shorturl_app.global.event.ClickEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +27,8 @@ import java.util.Random;
 public class ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
-    private final ShortUrlCacheRepository shortUrlCacheRepository;
-    private final ShortUrlClickAsyncHandler clickAsyncHandler;
+    private final ShortUrlCache shortUrlCache;
+    private final ClickEventProducer clickEventProducer;
 
     private static final Long DEFAULT_TTL = 2592000L; // 30일
     private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -78,11 +80,11 @@ public class ShortUrlService {
         );
     }
 
-    public String handleRedirect(String shortKey, String userAgent, String referer) {
+    public String handleRedirect(String shortKey, String userAgent, String referrer) {
 
         String originalUrl = getOriginalUrl(shortKey);
 
-        clickAsyncHandler.handleClick(shortKey, userAgent, referer);
+        clickEventProducer.sendClickEvent(shortKey, userAgent, referrer);
 
         return originalUrl;
     }
@@ -123,11 +125,11 @@ public class ShortUrlService {
 
     private void cacheShortUrl(ShortUrl url) {
         ShortUrlCacheValue cacheValue = ShortUrlCacheValue.from(url);
-        shortUrlCacheRepository.save(url.getShortKey(), cacheValue);
+        shortUrlCache.save(url.getShortKey(), cacheValue);
     }
 
     private String getOriginalUrl(String shortKey) {
-        Optional<ShortUrlCacheValue> cacheOpt = shortUrlCacheRepository.findByShortKey(shortKey);
+        Optional<ShortUrlCacheValue> cacheOpt = shortUrlCache.findByShortKey(shortKey);
 
         // 캐시 Hit
         if (cacheOpt.isPresent()) {
