@@ -1,6 +1,6 @@
-package com.yunju.shorturl_app.infra.kafka;
+package com.yunju.redirect_service.infra.kafka;
 
-import com.yunju.shorturl_app.global.event.ShortUrlClickedEvent;
+import com.yunju.redirect_service.global.event.dto.ShortUrlCreatedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -17,22 +17,15 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ShortUrlClickedEvent> kafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, ShortUrlCreatedEvent> kafkaListenerContainerFactory() {
 
         Map<String, Object> props = new HashMap<>();
 
-        /* ------- 핵심 Consumer 설정 ------- */
-
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka:29092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "shorturl-click-consumer");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "redirect-consumer");
 
-        // Kafka 최신 버전에서 권장: CLASSIC 고정
         props.put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "classic");
-
-        // 메시지 처음 받을 때 안전하게 earliest
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-        // 자동 커밋 OFF → 수동 커밋(BATCH)
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
         // 안정적 리밸런싱을 위한 설정
@@ -45,28 +38,23 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);           // 안정성 ↑
 
         props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ShortUrlClickedEvent.class.getName());
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.yunju.shorturl_app.*");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ShortUrlCreatedEvent.class.getName());
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.yunju.redirect_service.*");
+
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
 
-        DefaultKafkaConsumerFactory<String, ShortUrlClickedEvent> factory =
-                new DefaultKafkaConsumerFactory<>(
-                        props
-                );
+        DefaultKafkaConsumerFactory<String, ShortUrlCreatedEvent> factory =
+                new DefaultKafkaConsumerFactory<>(props);
 
-        /* ------- Listener Container 설정 ------- */
-
-        ConcurrentKafkaListenerContainerFactory<String, ShortUrlClickedEvent> container =
+        ConcurrentKafkaListenerContainerFactory<String, ShortUrlCreatedEvent> container =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         container.setConsumerFactory(factory);
         container.setConcurrency(3);
-
-        // 수동 커밋 모드
-        container.getContainerProperties()
-                .setAckMode(ContainerProperties.AckMode.BATCH);
+        container.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
 
         return container;
     }
+
 }

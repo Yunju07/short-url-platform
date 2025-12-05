@@ -1,11 +1,12 @@
-package com.yunju.shorturl_app.infra.kafka.consumer;
+package com.yunju.stats_service.infra.kafka.consumer;
 
-import com.yunju.shorturl_app.domain.statistics.service.ClickEventHandler;
-import com.yunju.shorturl_app.global.event.ShortUrlClickedEvent;
+import com.yunju.stats_service.global.event.ClickEventHandler;
+import com.yunju.stats_service.global.event.ShortUrlClickedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -15,7 +16,7 @@ public class KafkaClickEventConsumer {
 
     @KafkaListener(
             topics = "shorturl.click-log",
-            groupId = "shorturl-click-consumer",
+            groupId = "stats-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void consume(ShortUrlClickedEvent event) {

@@ -1,0 +1,22 @@
+plugins {
+	id 'java'
+}
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+group = 'com.yunju'
+version = '1.0.0'
+
+dependencies {
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	implementation 'nl.basjes.parse.useragent:yauaa:7.26.0'
+
+}
+
+jar {
+	enabled = true
+}

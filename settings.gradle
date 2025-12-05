@@ -1,0 +1,11 @@
+rootProject.name = '2025-externship-be-Yunju07'
+
+include "common"
+include "url-service"
+include "redirect-service"
+include "stats-service"
+
+project(':common').projectDir = file('common')
+project(':url-service').projectDir = file('url-service')
+project(':redirect-service').projectDir = file('redirect-service')
+project(':stats-service').projectDir = file('stats-service')

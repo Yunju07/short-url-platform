@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 180000
+      validation-timeout: 5000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+ 
+  kafka:
+    bootstrap-servers: shorturl-kafka:29092
+    consumer:
+      bootstrap-servers: shorturl-kafka:29092
+      group-id: url-consumer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      bootstrap-servers: shorturl-kafka:29092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    listener:
+      ack-mode: BATCH
+      concurrency: 1
+
+springdoc:
+  api-docs.enabled: true
+  swagger-ui.enabled: true
