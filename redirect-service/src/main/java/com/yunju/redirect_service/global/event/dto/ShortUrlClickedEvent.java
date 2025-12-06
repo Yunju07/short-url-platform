@@ -1,7 +1,6 @@
-package com.yunju.shorturl_app.global.event;
+package com.yunju.redirect_service.global.event.dto;
 
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Getter

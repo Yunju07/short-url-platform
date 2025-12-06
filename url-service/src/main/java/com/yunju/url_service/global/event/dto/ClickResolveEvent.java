@@ -1,4 +1,4 @@
-package com.yunju.shorturl_app.global.event;
+package com.yunju.url_service.global.event.dto;
 
 import lombok.*;
 
@@ -7,11 +7,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class ShortUrlClickedEvent {
-
+public class ClickResolveEvent {
     private String shortKey;
-    private String userAgent;
-    private String referrer;
     private LocalDateTime clickedAt;
 }

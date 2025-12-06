@@ -1,7 +1,8 @@
-package com.yunju.shorturl_app.domain.statistics.service;
+package com.yunju.shorturl_app.domain.shortUrl.service;
 
 import com.yunju.shorturl_app.domain.shortUrl.model.ShortUrl;
 import com.yunju.shorturl_app.domain.shortUrl.repository.ShortUrlRepository;
+import com.yunju.shorturl_app.domain.statistics.service.ShortUrlClickLogService;
 import com.yunju.shorturl_app.global.event.ShortUrlClickedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

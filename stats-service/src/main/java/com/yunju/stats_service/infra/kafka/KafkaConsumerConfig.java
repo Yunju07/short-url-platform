@@ -1,6 +1,6 @@
-package com.yunju.shorturl_app.infra.kafka;
+package com.yunju.stats_service.infra.kafka;
 
-import com.yunju.shorturl_app.global.event.ShortUrlClickedEvent;
+import com.yunju.stats_service.global.event.ShortUrlClickedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -24,15 +24,10 @@ public class KafkaConsumerConfig {
         /* ------- 핵심 Consumer 설정 ------- */
 
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka:29092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "shorturl-click-consumer");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "stats-consumer");
 
-        // Kafka 최신 버전에서 권장: CLASSIC 고정
         props.put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "classic");
-
-        // 메시지 처음 받을 때 안전하게 earliest
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-        // 자동 커밋 OFF → 수동 커밋(BATCH)
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
         // 안정적 리밸런싱을 위한 설정
@@ -45,15 +40,14 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);           // 안정성 ↑
 
         props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ShortUrlClickedEvent.class.getName());
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.yunju.shorturl_app.*");
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.yunju.stats_service.*");
+
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
 
         DefaultKafkaConsumerFactory<String, ShortUrlClickedEvent> factory =
-                new DefaultKafkaConsumerFactory<>(
-                        props
-                );
+                new DefaultKafkaConsumerFactory<>(props);
 
         /* ------- Listener Container 설정 ------- */
 

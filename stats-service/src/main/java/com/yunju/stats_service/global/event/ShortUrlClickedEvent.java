@@ -1,6 +1,9 @@
-package com.yunju.shorturl_app.global.event;
+package com.yunju.stats_service.global.event;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
