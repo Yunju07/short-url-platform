@@ -19,6 +19,8 @@ spring:
       host: shorturl-redis
       port: 6379
       timeout: 2000
+    mongodb:
+      uri: mongodb://shorturl-mongo:27017/shorturl
 
   kafka:
     bootstrap-servers: shorturl-kafka:29092

@@ -40,6 +40,7 @@ dependencies {
 	implementation 'nl.basjes.parse.useragent:yauaa:7.26.0'
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 }
 
 tasks.named('test') {

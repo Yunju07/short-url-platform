@@ -36,7 +36,7 @@ services:
     env_file:
       - ./compose/app.env
     depends_on:
-      db:
+      mongo:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -165,6 +165,41 @@ services:
     networks:
       - shorturl-net
 
+  mongo:
+    image: mongo:6.0
+    container_name: shorturl-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: shorturl
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - shorturl-net
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: shorturl-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8090:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: shorturl-mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: false
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongo
+    networks:
+      - shorturl-net
+
+
 networks:
   shorturl-net:
 
@@ -173,3 +208,5 @@ volumes:
   kafka_data:
   zookeeper_data:
   zookeeper_log:
+  mongo_data:
+
