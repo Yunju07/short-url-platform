@@ -1,21 +1,19 @@
 package com.yunju.url_service.infra.kafka.consumer;
 
-import com.yunju.url_service.domain.shorturl.repository.ShortUrlRepository;
 import com.yunju.url_service.global.event.consumer.ClickResolveEventConsumer;
 import com.yunju.url_service.global.event.dto.ClickResolveEvent;
+import com.yunju.url_service.infra.aggregation.ClickAggregationStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Transactional
 public class KafkaClickResolveEventConsumer implements ClickResolveEventConsumer {
 
-    private final ShortUrlRepository shortUrlRepository;
+    private final ClickAggregationStore aggregationStore;
 
     @KafkaListener(
             topics = "shorturl.click-resolve",
@@ -26,11 +24,8 @@ public class KafkaClickResolveEventConsumer implements ClickResolveEventConsumer
 
         log.info("[CONSUMER] click.resolve 수신 → {}", event.getShortKey());
 
-        shortUrlRepository.findByShortKey(event.getShortKey())
-                .ifPresent(url -> {
-                    url.increaseClick(event.getClickedAt());
-                    log.info("[CONSUMER] increaseClick 적용 완료 → {}, count={}",
-                            url.getShortKey(), url.getTotalClicks());
-                });
+        aggregationStore.accumulate(event.getShortKey(), event.getClickedAt());
+
+        log.debug("[CONSUME OK] buffering → {}", event.getShortKey());
     }
 }
