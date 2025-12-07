@@ -34,10 +34,4 @@ public class ShortUrl {
     private Long totalClicks;
 
     private LocalDateTime lastClickedAt;
-
-    // 클릭 증가 로직
-    public void increaseClick(LocalDateTime clickedAt) {
-        this.totalClicks += 1;
-        this.lastClickedAt = clickedAt;
-    }
 }
