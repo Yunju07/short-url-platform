@@ -31,10 +31,10 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     properties:
-      spring.json.trusted.packages: "com.yunju.shorturl_app.*"
+      spring.json.trusted.packages: "*"
     listener:
       ack-mode: batch
       concurrency: 3
 
 server:
-  port: 8081
+  port: 8083
