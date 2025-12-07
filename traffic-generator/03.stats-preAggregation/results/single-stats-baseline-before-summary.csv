@@ -1,0 +1,3 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+단일 URL 상세 통계 조회 API,260,4690,3643,5867,428.04,0.000%,4.21169,2.38,0.58,578.0
+TOTAL,260,4690,3643,5867,428.04,0.000%,4.21169,2.38,0.58,578.0

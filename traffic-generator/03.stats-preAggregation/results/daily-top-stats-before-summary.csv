@@ -1,0 +1,3 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+일간 URL 집계 Top N API,26,63045,40661,78366,16549.81,0.000%,.28608,0.65,0.04,2314.0
+TOTAL,26,63045,40661,78366,16549.81,0.000%,.28608,0.65,0.04,2314.0
