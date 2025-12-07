@@ -2,11 +2,10 @@ package com.yunju.redirect_service.domain.redirect.service;
 
 import com.yunju.redirect_service.domain.redirect.cache.ShortUrlCache;
 import com.yunju.redirect_service.domain.redirect.cache.ShortUrlCacheValue;
-import com.yunju.redirect_service.domain.redirect.model.ShortUrl;
-import com.yunju.redirect_service.domain.redirect.repository.ShortUrlRepository;
+import com.yunju.redirect_service.domain.redirect.model.UrlDocument;
+import com.yunju.redirect_service.domain.redirect.repository.UrlReadRepository;
 import com.yunju.redirect_service.global.apiPayload.code.status.ErrorStatus;
 import com.yunju.redirect_service.global.apiPayload.exception.CustomApiException;
-import com.yunju.redirect_service.global.event.dto.ClickResolveEvent;
 import com.yunju.redirect_service.global.event.producer.ClickEventProducer;
 import com.yunju.redirect_service.global.event.producer.ClickResolveEventProducer;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +22,9 @@ import java.util.Optional;
 public class RedirectService {
 
     private final ShortUrlCache shortUrlCache;
-    private final ShortUrlRepository shortUrlRepository;
     private final ClickEventProducer clickEventProducer;
     private final ClickResolveEventProducer clickResolveEventProducer;
+    private final UrlReadRepository urlReadRepository;
 
     public String handleRedirect(String shortKey, String userAgent, String referrer) {
 
@@ -48,34 +47,36 @@ public class RedirectService {
         if (cacheOpt.isPresent()) {
             ShortUrlCacheValue cache = cacheOpt.get();
 
-            long now = Instant.now().getEpochSecond();
-            if (cache.getExpireAt() <= now) {
+            if (isExpired(cache.getExpireAt())) {
                 throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
             }
 
-            //log.info("[Cache HIT] shortKey={}, originalUrl={}", shortKey, cache.getOriginalUrl());
             return cache.getOriginalUrl();
         }
 
-        ShortUrl shortUrl = shortUrlRepository.findByShortKey(shortKey)
+
+        UrlDocument doc = urlReadRepository.findById(shortKey)
                 .orElseThrow(() -> new CustomApiException(ErrorStatus.SHORT_URL_NOT_FOUND));
 
-        if (shortUrl.getExpiredAt().isBefore(LocalDateTime.now())) {
-            //log.warn("[Cache MISS] shortKey={}, reason=EXPIRED, fallback=DB", shortKey);
+        if (doc.isExpired()) {
             throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
         }
 
         log.info("[Cache MISS] shortKey={}, fallback=DB", shortKey);
 
         // warm cache
-        cacheShortUrl(shortUrl);
+        cacheShortUrl(doc);
 
-        return shortUrl.getOriginalUrl();
+        return doc.getOriginalUrl();
 
     }
 
-    private void cacheShortUrl(ShortUrl url) {
-        ShortUrlCacheValue cacheValue = ShortUrlCacheValue.from(url);
-        shortUrlCache.save(url.getShortKey(), cacheValue);
+    private void cacheShortUrl(UrlDocument doc) {
+        ShortUrlCacheValue cacheValue = ShortUrlCacheValue.from(doc);
+        shortUrlCache.save(doc.getId(), cacheValue);
+    }
+
+    private boolean isExpired(long expireAt) {
+        return expireAt <= Instant.now().getEpochSecond();
     }
 }

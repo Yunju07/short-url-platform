@@ -29,15 +29,16 @@ public class KafkaClickEventProducer implements ClickEventProducer {
 
 
         kafkaTemplate.send(TOPIC, shortKey, event)
-//                .thenAccept(result ->
-//                        log.info("[PRODUCER] Successfully sent → topic={}, partition={}, offset={}",
-//                                result.getRecordMetadata().topic(),
-//                                result.getRecordMetadata().partition(),
-//                                result.getRecordMetadata().offset())
-//                )
-                .exceptionally(ex -> {
-                    //log.error("[PRODUCER] Failed to send event → {}", ex.getMessage());
-                    return null;
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.warn("[PRODUCER FAIL] shortKey={}, cause={}", shortKey, ex.getMessage());
+                        return;
+                    }
+
+                    log.debug("[PRODUCE OK] shortKey={}, partition={}, offset={}",
+                            shortKey,
+                            result.getRecordMetadata().partition(),
+                            result.getRecordMetadata().offset());
                 });
     }
 }
