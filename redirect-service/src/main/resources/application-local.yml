@@ -7,34 +7,37 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: false
+      ddl-auto: update
 
   data:
     redis:
       host: localhost
       port: 6379
       timeout: 2000
+    mongodb:
+      uri: mongodb://localhost:27017/shorturl
 
   kafka:
-    bootstrap-servers: shorturl-kafka:29092
+    bootstrap-servers: localhost:9092
     consumer:
-      group-id: shorturl-click-consumer
+      group-id: redirect-consumer
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    properties:
-      spring.json.trusted.packages: "com.yunju.shorturl_app.*"
     listener:
-      ack-mode: batch
-      concurrency: 3
+      ack-mode: BATCH
+      concurrency: 1
+
+springdoc:
+  api-docs.enabled: true
+  swagger-ui.enabled: true
 
 server:
-  port: 8081
+  port: 8082
+

@@ -20,16 +20,21 @@ public class KafkaClickResolveEventProducer implements ClickResolveEventProducer
 
     @Override
     public void send(String shortKey, LocalDateTime clickedAt) {
-        try {
-            ClickResolveEvent event = ClickResolveEvent.builder()
-                .shortKey(shortKey)
-                .clickedAt(clickedAt)
-                .build();
+        ClickResolveEvent event = ClickResolveEvent.builder()
+            .shortKey(shortKey)
+            .clickedAt(clickedAt)
+            .build();
 
-            kafkaTemplate.send(TOPIC, event.getShortKey(), event);
-            log.info("[PRODUCE] click.resolve 발행 → {}", event.getShortKey());
-        } catch (Exception ex) {
-            log.error("[FAILED PRODUCE] click.resolve 실패: {}", ex.getMessage(), ex);
+            kafkaTemplate.send(TOPIC, event.getShortKey(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.warn("[PRODUCER FAIL] click.resolve shortKey={}, cause={}", shortKey, ex.getMessage());
+                            return;
+                        }
+
+                        log.debug("[PRODUCE OK] click.resolve partition={}, offset={}",
+                                result.getRecordMetadata().partition(),
+                                result.getRecordMetadata().offset());
+                    });
         }
-    }
 }
