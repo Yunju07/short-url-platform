@@ -1,4 +1,4 @@
-package com.yunju.stats_service.domain.stats.model;
+package com.yunju.stats_service.domain.stats.model.id;
 
 import jakarta.persistence.Embeddable;
 import lombok.*;

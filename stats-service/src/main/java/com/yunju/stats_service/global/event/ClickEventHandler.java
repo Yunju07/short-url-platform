@@ -21,6 +21,8 @@ public class ClickEventHandler {
 
         clickLogService.recordClick(
                 event.getShortKey(),
+                event.getShortUrl(),
+                event.getOriginalUrl(),
                 event.getUserAgent(),
                 event.getReferrer(),
                 event.getClickedAt()

@@ -1,4 +1,4 @@
-package com.yunju.stats_service.domain.stats.model;
+package com.yunju.stats_service.domain.stats.model.entity;
 
 import com.yunju.common.enums.DeviceType;
 import jakarta.persistence.*;
@@ -17,12 +17,11 @@ public class ShortUrlClickLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** ShortUrl 테이블 FK */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "short_url_id", nullable = false)
-    private ShortUrl shortUrl;
-
     private String shortKey;
+
+    private String shortUrl;
+
+    private String originalUrl;
 
     private LocalDateTime clickedAt;
 
@@ -35,16 +34,18 @@ public class ShortUrlClickLog {
     private DeviceType deviceType;
 
     public static ShortUrlClickLog create(
-            ShortUrl url,
             String shortKey,
+            String shortUrl,
+            String originalUrl,
             String referrer,
             String userAgent,
             DeviceType deviceType,
             LocalDateTime clickedAt
     ) {
         return ShortUrlClickLog.builder()
-                .shortUrl(url)
                 .shortKey(shortKey)
+                .shortUrl(shortUrl)
+                .originalUrl(originalUrl)
                 .referrer(referrer)
                 .userAgent(userAgent)
                 .deviceType(deviceType)
