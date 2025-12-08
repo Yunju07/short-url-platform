@@ -19,6 +19,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Seoul
     networks:
       - shorturl-net
 
@@ -44,6 +45,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Seoul
     networks:
       - shorturl-net
 
@@ -67,6 +69,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Seoul
     networks:
       - shorturl-net
 
@@ -74,6 +77,7 @@ services:
     image: mysql:8.0
     container_name: shorturl-db
     environment:
+      TZ: Asia/Seoul
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shorturl
       MYSQL_USER: shorturl
@@ -113,6 +117,7 @@ services:
     image: confluentinc/cp-zookeeper:7.6.1
     container_name: shorturl-zookeeper
     environment:
+      TZ: Asia/Seoul
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
@@ -132,6 +137,7 @@ services:
       - "9092:9092"
       - "29092:29092"
     environment:
+      TZ: Asia/Seoul
       KAFKA_ZOOKEEPER_CONNECT: "shorturl-zookeeper:2181"
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka:9092,PLAINTEXT_HOST://shorturl-kafka:29092
@@ -172,6 +178,7 @@ services:
     ports:
       - "27017:27017"
     environment:
+      TZ: Asia/Seoul
       MONGO_INITDB_DATABASE: shorturl
     healthcheck:
       test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
@@ -208,4 +215,3 @@ volumes:
   zookeeper_data:
   zookeeper_log:
   mongo_data:
-
