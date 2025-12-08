@@ -18,10 +18,12 @@ public class KafkaClickEventProducer implements ClickEventProducer {
     private static final String TOPIC = "shorturl.click-log";
 
     @Override
-    public void send(String shortKey, String userAgent, String referrer, LocalDateTime clickedAt) {
+    public void send(String shortKey, String shortUrl, String originalUrl, String userAgent, String referrer, LocalDateTime clickedAt){
 
         ShortUrlClickedEvent event = ShortUrlClickedEvent.builder()
                 .shortKey(shortKey)
+                .shortUrl(shortUrl)
+                .originalUrl(originalUrl)
                 .userAgent(userAgent)
                 .referrer(referrer)
                 .clickedAt(clickedAt)
