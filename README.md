@@ -458,6 +458,7 @@ traffic-generator/
        ├── shortkeys_1000.csv
        └── shortkeys_10000.csv
 ```
+- 각 폴더마다 Test Plan과 결과 파일이 저장되어 있습니다.
 
 ---
 
