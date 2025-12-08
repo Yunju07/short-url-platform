@@ -10,6 +10,7 @@ import com.yunju.redirect_service.global.event.producer.ClickEventProducer;
 import com.yunju.redirect_service.global.event.producer.ClickResolveEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -26,19 +27,35 @@ public class RedirectService {
     private final ClickResolveEventProducer clickResolveEventProducer;
     private final UrlReadRepository urlReadRepository;
 
+    @Value("${shorturl.domain}")
+    private String shortUrlDomain;
+
     public String handleRedirect(String shortKey, String userAgent, String referrer) {
 
         LocalDateTime clickTime = LocalDateTime.now();
 
-        clickEventProducer.send(shortKey, userAgent, referrer, clickTime);
 
         String originalUrl = getOriginalUrl(shortKey);
+
+        clickEventProducer.send(
+                shortKey,
+                buildShortUrl(shortKey),
+                originalUrl,
+                userAgent,
+                referrer,
+                clickTime);
 
         clickResolveEventProducer.send(shortKey, clickTime);
 
         return originalUrl;
     }
 
+    private String buildShortUrl(String shortKey) {
+        if (shortUrlDomain.endsWith("/")) {
+            return shortUrlDomain + shortKey;
+        }
+        return shortUrlDomain + "/" + shortKey;
+    }
 
     private String getOriginalUrl(String shortKey) {
         Optional<ShortUrlCacheValue> cacheOpt = shortUrlCache.findByShortKey(shortKey);

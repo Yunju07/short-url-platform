@@ -32,3 +32,7 @@ spring:
 springdoc:
   api-docs.enabled: true
   swagger-ui.enabled: true
+
+stats:
+  batch:
+    interval-ms: 600000

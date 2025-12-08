@@ -8,8 +8,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class ShortUrlClickedEvent {
-
     private String shortKey;
+    private String shortUrl;
+    private String originalUrl;
     private String userAgent;
     private String referrer;
     private LocalDateTime clickedAt;
