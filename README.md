@@ -141,3 +141,119 @@ Value:
 
 ---
 
+## 4. Redis 캐시 전략
+
+### 4.2 도입 배경
+
+> 단순 Key-Value 캐싱부터 만료 정책 관리까지 안정적으로 지원하고, 
+운영 경험과 생태계가 충분히 확보된 인메모리 저장소이기 때문에 Redis를 선택했습니다.
+> 
+
+### 4.3 Key–Value 구조 설계
+
+**① Key 설계**
+
+| Key 형태 | 예시 | 비고 |
+| --- | --- | --- |
+| shorturl:{shortKey} | shorturl:`Q36Jsq` | 중복 없이 명확한 namespace 제공 |
+
+**② Value 구조**
+
+리다이렉트 API에 필요한 정보만 저장해 **최소한의 데이터로 빠르게 반환**하도록 설계했습니다.
+
+```
+{
+  "originalUrl": String,
+  "expiredAt": LocalDateTime
+}
+```
+
+- 조회 과정에서 `expireAt`을 재검증하여 만료 일관성 유지
+
+### 4.4 TTL
+
+비즈니스 만료 정책과 Redis TTL을 유사하게 설정하여 URL과 캐시의 만료 흐름을 동일하게 유지하였습니다.
+또한, 만료 직후 발생할 수 있는 대량의 DB 조회(스탬피드)를 방지하기 위해,  Redis TTL은 expiredAt보다 일정 시간 더 길게 유지합니다.
+
+- **TTL = (expiredAt – 현재 시각) + 버퍼 시간(60초)**
+
+### 4.5 캐시 운영 전략 (Cache Aside)
+
+단축 URL 조회는 일반적인 읽기 중심 구조이므로 가장 안정적이며 범용적인 **Cache-Aside 패턴**을 사용합니다.또한, 생성 시 즉시 Redis에 세팅하는 **Warm cache 전략**을 함께 사용합니다.
+
+**URL 조회 흐름**
+
+```
+
+1) Redis GET(shorturl:{key})
+    ├ Hit → Value parsing 후 expireAt 검증
+    │       ├ expireAt 지남 → 즉시 410 반환
+    │       └ 사용 가능 → originalUrl 반환
+    └ Miss → DB 조회
+             ├ 없거나 만료 → 410
+             └ 있으면 redis.set(key, TTL 계산)
+```
+
+- Warm-up 전략으로 **캐시 초기 적중률** 향상
+- 만료 직후에도 Redis에서 바로 만료 응답 반환 →  **Cache Stampede** 예방
+- 캐시 장애 시 자동으로 **DB fallback**
+
++) 단축 URL은 본질적으로 생성 후 데이터가 변경되지 않으므로 시와 DB 간 데이터 불일치 이슈가 거의 없습니다. 또한, 현재 단축 URL 삭제 기능이 존재하지 않기 때문에 별도의 동기화 로직이 필요하지 않습니다.
+
+## 4.6  Redis 운영 정책
+
+**① maxmemory: 2GB**
+
+- 2GB 기준 Redis에 저장 가능한 단축 URL 캐시 수는 **약 1,000만 개**(엔트리당 평균 160bytes로 측정)
+- **일일 URL 생성량 100만 건**과 대부분의 **TTL이 30일**이라는 가정 하에 최악의 경우(모든 키가 동일하지 않은 경우)에도 **30%** 보장
+
+**② eviction 정책: volatile-lru**
+
+| 정책 | 삭제 대상 기준 | 장점 | 단점 |
+| --- | --- | --- | --- |
+| **volatile-lru** | TTL이 있는 key 중 오래 사용되지 않은 key 삭제 | 인기 URL은 유지 | TTL 짧아도 자주 조회되면 유지 |
+| **volatile-ttl** | TTL이 가장 짧은 key부터 삭제 | 메모리 회수 시점 예측 용이 | 조회 빈도 고려하지 않음 → 인기 URL도 삭제 가능 |
+- 오래 사용되지 않은 URL은 가치가 낮아 제거해도 무방
+- 만료 직후 요청이 몰릴 수 있어 **TTL에 버퍼 시간**을 두었으며, volatile-ttl은 이런 키를 우선 제거하기 때문에 **버퍼 전략의 효과가 사라져 LRU 정책**이 더 적합
+
+---
+
+## 5. CQRS 패턴 도입
+
+### 5.1 도입 배경
+
+단축 URL 생성과 리다이렉트 조회는 트래픽 성격이 다르며, 특히 **조회 요청은 생성 대비 높은 빈도**로 발생합니다. 단일 DB에서 read/write가 동시에 증가할 경우 **connection pool 포화 및 요청 지연**이 발생할 가능성이 있어 기능별 데이터 접근 경로 분리가 필요했습니다.
+
+### 5.2 설계 방식
+
+- 생성 API는 MySQL을 기준으로 데이터 정합성을 우선 처리
+- 리다이렉트 조회는 **MongoDB 기반 조회 모델**로 분리
+- URL 데이터는 이벤트 기반으로 MongoDB에 적재하여 일관성 유지
+
+**💡 MongoDB의 구조적 이점**
+
+- 단일 키를 기준으로 단건 조회하기에 최적화
+    - `_id` 조회 시 SQL Parsing, Join, ORM 매핑 과정 없음
+    - 네트워크 round-trip 비용 최소화
+- 실제 저장 형태:
+    
+    ```
+    {
+      "shortKey": String,
+      "originalUrl": String,
+      "expiredAt": LocalDateTime
+    }
+    ```
+    
+
+### 5.3 기대 효과
+
+**(1) 조회 성능 안정화**
+: MongoDB 단일 인덱스 기반 조회로 캐시 미스 발생 시에도 안정적인 응답 속도 확보
+
+**(2) 트래픽 증가 대응 **
+: Redirect API만 Scale-out 가능
+
+**(3) 장애 격리**
+: MySQL write 문제 발생 시에도 redirect API는 독립적으로 동작
+
