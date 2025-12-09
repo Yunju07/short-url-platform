@@ -54,7 +54,7 @@
 
 | 기준 | url-service | redirect-service | stats-service |
 | --- | --- | --- | --- |
-| read/write 특성 | write-heavy | read-heavy | event-driven write |
+| read/write 특성 | write-heavy | read-heavy | write-heavy |
 | 실시간성 | 중요 | 매우 중요 | 낮음 |
 | 장애 전파 영향도 | 높음 (요청 실패 발생) | 낮음 (fallback 가능) | 없음 |
 | 이벤트 역할 | Producer & Consumer | Producer & Consumer | Consumer |
