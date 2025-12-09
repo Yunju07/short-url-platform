@@ -265,9 +265,9 @@ Value:
     - 네트워크 round-trip 비용 최소화
 - 실제 저장 형태:
     
-    ```json
+    ```
     {
-      "shortKey": String,
+      "id": String,  // (= shortKey)
       "originalUrl": String,
       "expiredAt": LocalDateTime
     }
