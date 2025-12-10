@@ -1,7 +1,7 @@
 package com.yunju.redirect_service.infra.kafka.producer;
 
 import com.yunju.redirect_service.global.event.dto.ShortUrlClickedEvent;
-import com.yunju.redirect_service.global.event.producer.ClickEventProducer;
+import com.yunju.redirect_service.global.event.producer.ClickLogEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class KafkaClickEventProducer implements ClickEventProducer {
+public class KafkaClickEventProducer implements ClickLogEventProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final String TOPIC = "shorturl.click-log";

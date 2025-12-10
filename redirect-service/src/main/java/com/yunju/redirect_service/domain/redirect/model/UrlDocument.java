@@ -16,15 +16,12 @@ public class UrlDocument {
     private String originalUrl;
 
     // epoch seconds (ex: System.currentTimeMillis() / 1000)
-    private Long expiredAt;
+    private Long expiredAtEpochSec;
 
-    public UrlDocument(String shortKey, String originalUrl, Long expiredAt) {
+    public UrlDocument(String shortKey, String originalUrl, Long expiredAtEpochSec) {
         this.id = shortKey;
         this.originalUrl = originalUrl;
-        this.expiredAt = expiredAt;
+        this.expiredAtEpochSec = expiredAtEpochSec;
     }
 
-    public boolean isExpired() {
-        return expiredAt < (System.currentTimeMillis() / 1000);
-    }
 }

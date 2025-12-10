@@ -12,17 +12,17 @@ import lombok.NoArgsConstructor;
 public class ShortUrlCacheValue {
 
     private String originalUrl;
-    private long expireAt;  // 만료 시각 (epoch seconds)
+    private long expiredAtEpochSec;  // 만료 시각 (epoch seconds)
 
     public static ShortUrlCacheValue from(UrlDocument doc) {
 
         return new ShortUrlCacheValue(
                 doc.getOriginalUrl(),
-                doc.getExpiredAt()
+                doc.getExpiredAtEpochSec()
         );
     }
 
-    public static ShortUrlCacheValue create(String originalUrl, long expireAt) {
-        return new ShortUrlCacheValue(originalUrl, expireAt);
+    public static ShortUrlCacheValue create(String originalUrl, long expireAtEpochSec) {
+        return new ShortUrlCacheValue(originalUrl, expireAtEpochSec);
     }
 }

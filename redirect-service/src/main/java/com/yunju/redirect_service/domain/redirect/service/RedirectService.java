@@ -2,11 +2,13 @@ package com.yunju.redirect_service.domain.redirect.service;
 
 import com.yunju.redirect_service.domain.redirect.cache.ShortUrlCache;
 import com.yunju.redirect_service.domain.redirect.cache.ShortUrlCacheValue;
+import com.yunju.redirect_service.domain.redirect.model.ShortUrl;
 import com.yunju.redirect_service.domain.redirect.model.UrlDocument;
-import com.yunju.redirect_service.domain.redirect.repository.UrlReadRepository;
+import com.yunju.redirect_service.domain.redirect.repository.ShortUrlRepository;
+import com.yunju.redirect_service.domain.redirect.repository.UrlDocumentRepository;
 import com.yunju.redirect_service.global.apiPayload.code.status.ErrorStatus;
 import com.yunju.redirect_service.global.apiPayload.exception.CustomApiException;
-import com.yunju.redirect_service.global.event.producer.ClickEventProducer;
+import com.yunju.redirect_service.global.event.producer.ClickLogEventProducer;
 import com.yunju.redirect_service.global.event.producer.ClickResolveEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +25,10 @@ import java.util.Optional;
 public class RedirectService {
 
     private final ShortUrlCache shortUrlCache;
-    private final ClickEventProducer clickEventProducer;
+    private final ClickLogEventProducer clickLogEventProducer;
     private final ClickResolveEventProducer clickResolveEventProducer;
-    private final UrlReadRepository urlReadRepository;
+    private final UrlDocumentRepository urlDocumentRepository;
+    private final ShortUrlRepository shortUrlRepository;
 
     @Value("${shorturl.domain}")
     private String shortUrlDomain;
@@ -34,10 +37,9 @@ public class RedirectService {
 
         LocalDateTime clickTime = LocalDateTime.now();
 
-
         String originalUrl = getOriginalUrl(shortKey);
 
-        clickEventProducer.send(
+        clickLogEventProducer.send(
                 shortKey,
                 buildShortUrl(shortKey),
                 originalUrl,
@@ -58,34 +60,57 @@ public class RedirectService {
     }
 
     private String getOriginalUrl(String shortKey) {
-        Optional<ShortUrlCacheValue> cacheOpt = shortUrlCache.findByShortKey(shortKey);
 
-        // 캐시 Hit
+        // 1) 캐시 조회 시도
+        Optional<ShortUrlCacheValue> cacheOpt = findFromCache(shortKey);
         if (cacheOpt.isPresent()) {
             ShortUrlCacheValue cache = cacheOpt.get();
-
-            if (isExpired(cache.getExpireAt())) {
-                throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
-            }
-
+            validateNotExpired(cache.getExpiredAtEpochSec());
             return cache.getOriginalUrl();
         }
 
+        // 2) MongoDB 조회
+        UrlDocument doc = findFromMongoOrFallback(shortKey);
 
-        UrlDocument doc = urlReadRepository.findById(shortKey)
-                .orElseThrow(() -> new CustomApiException(ErrorStatus.SHORT_URL_NOT_FOUND));
+        validateNotExpired(doc.getExpiredAtEpochSec());
 
-        if (doc.isExpired()) {
-            throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
-        }
-
-        log.info("[Cache MISS] shortKey={}, fallback=DB", shortKey);
-
-        // warm cache
+        // 3) warm cache
         cacheShortUrl(doc);
 
         return doc.getOriginalUrl();
+    }
 
+    private Optional<ShortUrlCacheValue> findFromCache(String shortKey) {
+        return shortUrlCache.findByShortKey(shortKey);
+    }
+
+    private UrlDocument findFromMongoOrFallback(String shortKey) {
+
+        // 1) Mongo 조회
+        Optional<UrlDocument> mongoOpt = findFromMongo(shortKey);
+        if (mongoOpt.isPresent()) {
+            log.info("[Cache MISS] shortKey={} → HIT in MongoDB", shortKey);
+            return mongoOpt.get();
+        }
+
+        log.warn("[Mongo MISS] shortKey={} → fallback to MySQL", shortKey);
+
+        // 2) MySQL 조회
+        ShortUrl mysqlEntity = findFromMySql(shortKey);
+
+        // 3) Mongo Self-Healing
+        UrlDocument healed = healMongo(mysqlEntity);
+
+        return healed;
+    }
+
+    private Optional<UrlDocument> findFromMongo(String shortKey) {
+        return urlDocumentRepository.findById(shortKey);
+    }
+
+    private ShortUrl findFromMySql(String shortKey) {
+        return shortUrlRepository.findByShortKey(shortKey)
+                .orElseThrow(() -> new CustomApiException(ErrorStatus.SHORT_URL_NOT_FOUND));
     }
 
     private void cacheShortUrl(UrlDocument doc) {
@@ -93,7 +118,24 @@ public class RedirectService {
         shortUrlCache.save(doc.getId(), cacheValue);
     }
 
-    private boolean isExpired(long expireAt) {
-        return expireAt <= Instant.now().getEpochSecond();
+    private UrlDocument healMongo(ShortUrl mysql) {
+
+        UrlDocument doc = new UrlDocument(
+                mysql.getShortKey(),
+                mysql.getOriginalUrl(),
+                mysql.getExpiredAt().toEpochSecond(java.time.ZoneOffset.UTC)
+        );
+
+        urlDocumentRepository.save(doc);
+
+        log.info("[Mongo HEAL] shortKey={} → Mongo upsert completed", mysql.getShortKey());
+
+        return doc;
+    }
+
+    private void validateNotExpired(Long expiredAtEpochSec) {
+        if (expiredAtEpochSec <= Instant.now().getEpochSecond()) {
+            throw new CustomApiException(ErrorStatus.SHORT_URL_EXPIRED);
+        }
     }
 }

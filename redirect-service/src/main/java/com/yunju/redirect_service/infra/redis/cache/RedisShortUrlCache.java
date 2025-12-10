@@ -24,7 +24,7 @@ public class RedisShortUrlCache implements ShortUrlCache {
 
     public void save(String shortKey, ShortUrlCacheValue value) {
         long nowEpoch = Instant.now().getEpochSecond();
-        long ttlSeconds = value.getExpireAt() - nowEpoch;
+        long ttlSeconds = value.getExpiredAtEpochSec() - nowEpoch;
 
         if (ttlSeconds <= 0) {
             ttlSeconds = 0;
