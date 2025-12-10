@@ -73,25 +73,29 @@
 
 MSA 구조에서 서비스 간 결합을 최소화하고 장애 전파를 제어하기 위해 **직접 호출을 하지 않도록 구성**하였습니다. 서비스는 **Kafka 기반 이벤트 통신**을 통해 요청 흐름과 처리 시점을 분리하고, 필요한 데이터만 비동기적으로 전달받아 각자의 책임 범위 내에서 처리하도록 설계하였습니다.
 
-**왜 Kafka를 선택했는가?**
-
-| 기준 | **Kafka** | **Redis Streams** | **RabbitMQ** |
-| --- | --- | --- | --- |
-| **처리량** | 매우 높음 (대용량 스트리밍 처리 적합) | 높음 but 메모리 기반 제약 | 중간 수준, 대규모 스트림에는 부적합 |
-| **확장성** | 파티션 기반 수평 확장 용이 | 샤딩으로 가능하지만 직접 설계 필요 | 큐 단위 확장 한계 |
-| **내구성 / 데이터 보관** | 로그 파일로 영구 보관 가능 | 메모리 기반 → SSD 사용 시 성능 저하 | 보관 기간 짧음, 장기 저장 비적합 |
-| **장애 복구** | Offset 기반 → 정확한 재처리 가능 | 소비 위치 관리 직접 구현 필요 | Ack 기반, 재처리는 가능하지만 정확 위치 지정 어려움 |
-- 파티션 기반으로 수평 확장이 가능 → 여러 이벤트들을 종류별로 병렬 처리가 가능하다는 구조적 이점
-- 파티션마다 Offset을 별도로 기록 → 장애가 나도 각 파티션의 마지막 읽은 위치부터 정확하게 이어서 처리
-  
 ### 3.1 이벤트 종류
 
-**① `click-log`** 
+**① `click-log`**
 
 - **목적:** URL이 클릭 되었음을 알리는 이벤트
 - **Producer:** redirect-service
 - **Consumer:** stats-service
 - 처리 방식: stats-service는 해당 클릭 정보를 RDB에 저장하여 집계 데이터의 기반으로 사용
+- **스키마**:
+    
+    ```
+    Key: shortKey
+    Value:
+    {
+      "shortKey": String,
+      "shortUrl": String,
+      "originalUrl": String,
+      "userAgent": String,
+      "referrer": String,
+      "clickedAt": LocalDateTime
+    }
+    ```
+    
 
 **② `click-resolve`**
 
@@ -99,6 +103,17 @@ MSA 구조에서 서비스 간 결합을 최소화하고 장애 전파를 제어
 - **Producer**: redirect-service
 - **Consumer**: url-service
 - **처리 방식**: url-service는 메타데이터(총 클릭 수 증가, 마지막 클릭 시각 변경)를 업데이트하여 조회 API 응답에 반영
+- **스키마**:
+    
+    ```
+    Key: shortKey
+    Value:
+    {
+      "shortKey": String,
+      "clickedAtEpochSec": long
+    }
+    ```
+    
 
 **③ `url-created`**
 
@@ -106,54 +121,26 @@ MSA 구조에서 서비스 간 결합을 최소화하고 장애 전파를 제어
 - **Producer:** url-service
 - **Consumer:** redirect-service
 - **처리 방식:** redirect-service는 해당 URL 정보를 캐시에 미리 저장하고 조회용 MongoDB에도 적재하여 이후 요청 시 cache miss를 줄이고 빠른 상세 조회를 가능하게 처리
+- **스키마**:
+    
+    ```
+    Key: shortKey
+    Value:
+    {
+      "shortKey": String,
+      "originalUrl": String,
+      "expiredAt": LocalDateTime
+    }
+    ```
+    
+**❓`click-log`과 `click-resolve`의 차이**
 
-### 3.2 이벤트 스키마
+→`click-log`는 모든 클릭을 기록하기 위한 이벤트이며, 실패·만료·비정상 조회까지 포함한 전체 클릭 히스토리를 남깁니다. 
+반면 `click-resolve`는 정상적으로 리다이렉트된 URL에 한해 메타데이터를 업데이트하기 위한 이벤트입니다.
 
-**① `click-log`** 
+### 3.2 이벤트 처리 과정 (다이어그램)
 
-```
-Key: shortKey
-Value:
-{
-  "shortKey": String,
-  "shortUrl": String,
-  "originalUrl": String,
-  "userAgent": String,
-  "referrer": String,
-  "clickedAt": LocalDateTime
-}
-```
-
-- DeviceType 파싱 작업은 통계서비스에서 처리하도록 구성
-
-**② `click-resolve`**
-
-```
-Key: shortKey
-Value:
-{
-  "shortKey": String,
-  "clickedAt": LocalDateTime
-}
-```
-
-**③ `url-created`**
-
-```
-Key: shortKey
-Value:
-{
-  "shortKey": String,
-  "originalUrl": String,
-  "expiredAt": LocalDateTime
-}
-```
-
-- epoch로 재계산하지 않고 생성 시점의 만료 값을 그대로 전달하여 시점 차이 없이 정합성을 유지
-
-### 3.3 이벤트 처리 과정 (다이어그램)
-
-<img width="1878" height="1015" alt="EDA1" src="https://github.com/user-attachments/assets/4d6f7eda-856f-4c03-8222-c1f1bf37685a" />
+<img width="4732" height="2726" alt="EDA1" src="https://github.com/user-attachments/assets/113b423a-9f47-4d42-a337-b56a6cb04bc1" />
 
 
 - 리다이렉트 요청 처리와 데이터 적재 시점을 분리하여 **응답 속도를 향상**
@@ -164,6 +151,67 @@ Value:
 
 - 조회 성능을 높이기 위한 **캐시 저장소**는 리다이렉트에서 온전히 관리하도록 책임 분리
 - **CQRS 패턴**: 조회 모델과 커맨드 모델 간 데이터 동기화
+
+### 3.3 이벤트 통신 고도화 전략
+
+**1) 레플리카 수 증가 및 ack 설정 강화로 내구성 향상**
+
+Kafka 메세지 유실 가능성을 낮추기 위해 브로커를 3개로 구성하였으며, 
+발행 시의 ACK와 최소 동기 레플리카 수, 재시도를 이벤트 별로 설정하였습니다.
+
+| 항목 | 클릭 관련 이벤트 | URL 생성 이벤트 |
+| --- | --- | --- |
+| acks | 1 | all |
+| min.insync.replicas | 1 | 2 |
+| replication.factor | 3 | 3 |
+| retries | 1 | 5 |
+| retry.backoff | 100ms | 300ms |
+| 목적 | 처리량 최우선, 일부 손실 허용 | 손실 방지, 높은 신뢰성 |
+- URL 생성 이벤트 → **안정성** 중심
+- 클릭 관련 이벤트 → **성능** 중심
+
+**2) 재처리 및 DLQ 설정**
+
+| 이벤트 타입 | 재시도 횟수 | 백오프 간격 | DLQ 토픽 | DLQ 활용 목적 |
+| --- | --- | --- | --- | --- |
+| click-log | 1회 | 3초 | click-log.dlq | 누락된 클릭 로그를 별도 수집하여 통계에 반영 가능 |
+| click-resolve | 3회 | 3초 | click-resolve.dlq | URL 메타데이터를 수동으로 수정하여 일관성 유지 |
+| url-created | 5회 | 5초 | url-created.dlq | 리다이렉트에는 영향 없지만, 서비스 이상 징후 감지용 |
+
+운영자가 `url-created` DLQ를 확인하는 시점에는 이미 MySQL 기반으로 요청이 정상 처리된 상태일 가능성이 높습니다. 따라서 이벤트를 재처리하는 것은 의미가 적고, 조회 모델(MongoDB) 동기화 실패를 감지하기 위한 용도로 사용합니다.
+
+**📍 DLQ 모니터링 방법**
+
+- 도커 실행 후 kafka-ui 접속
+- Topics 메뉴에서 dlq 검색
+- kafka-ui: [http://localhost:9000](http://localhost:9000/)
+
+<img width="808" height="281" alt="image" src="https://github.com/user-attachments/assets/7b56cd4f-1e7d-4287-a039-b76762321b13" />
+
+
+**3) URL 생성 이벤트의 지연/유실 시 대응 전략**
+
+URL 생성 이벤트가 Kafka 구간에서 유실되거나 지연되면, 리다이렉트 서비스는 해당 shortKey를 조회할 때 MongoDB에 데이터가 없는 상태를 맞이할 수 있습니다. 이 문제를 해결하기 위해 **Outbox 방식과 DB Fallback 방식**을 고려하였습니다.
+
+| 구분 | **Outbox 방식** | **DB Fallback 방식**  |
+| --- | --- | --- |
+| **데이터 흐름** | MySQL 저장 → Outbox 기록 → 스케줄러 → Kafka → Mongo 업데이트 | Mongo 조회 → 없으면 MySQL 조회 → Mongo에 upsert(Self-healing) |
+| **실시간성** | **낮음** (Mongo 업데이트가 스케줄러 + Kafka 소비 이후 반영됨) | 높음 (Mongo miss여도 MySQL로 즉시 처리) |
+| **구현 난이도** | **높음** (Outbox 테이블, 상태 플래그, Relay 스케줄러, 중복·순서 문제) | **낮음** (기존 ShortUrl 엔티티 그대로 fallback 처리) |
+| **이벤트 유실 방지** | 완전 보장 | 완전 보장 불가 |
+| **장점** | 이벤트 보장성 최강 | 실시간성 최강, 단순함, 장애에도 자동 self-healing |
+| **단점** | **복잡하고 실시간성 부족** | **이벤트 유실이 많으면, MySQL 부하가 증가** |
+
+Outbox 방식은 메시지 전달을 보장한다는 장점이 있지만, 조회 모델 업데이트 시점이 Kafka 처리 상태에 의존하게 되어 초기 요청 처리 성능이 저하될 수 있습니다.
+
+반면 DB fallback 방식은 MongoDB에 데이터가 아직 반영되지 않은 상태에서도 MySQL 기준으로 데이터를 조회한 뒤 MongoDB를 보정할 수 있어 **서비스 응답 성공률과 실시간성 측면에서 안정적입니다.**
+
+<img width="1000" alt="DB fallback" src="https://github.com/user-attachments/assets/685c1371-6bf2-4d69-a60f-f83a314db003" />
+
+**4) 클릭 로그 수집**
+
+앞선 Outbox 전략은 **click-log와 click-resolve 이벤트의 유실이 치명적**인 경우, 안정적으로 저장하기 위한 전략으로 사용할 수 있습니다. 
+하지만 해당 전략은 데이터베이스 쓰기 작업을 수반하므로, 응답 속도와 처리량이 중요한 현재의 경우는 적합하지 않습니다. 
 
 ---
 
@@ -189,14 +237,14 @@ Value:
 
 리다이렉트 API에 필요한 정보만 저장해 **최소한의 데이터로 빠르게 반환**하도록 설계했습니다.
 
-```json
+```
 {
   "originalUrl": String,
-  "expiredAt": LocalDateTime
+  "expiredAtEpochSec": long
 }
 ```
 
-- 조회 과정에서 `expireAt`을 재검증하여 만료 일관성 유지
+- 조회 과정에서 `expiredAtEpochSec`을 재검증하여 만료 일관성 유지
 
 ### 4.3 TTL
 
@@ -212,7 +260,6 @@ Value:
 **URL 조회 흐름**
 
 ```
-
 1) Redis GET(shorturl:{key})
     ├ Hit → Value parsing 후 expireAt 검증
     │       ├ expireAt 지남 → 즉시 410 반환
@@ -269,7 +316,7 @@ Value:
     {
       "id": String,  // (= shortKey)
       "originalUrl": String,
-      "expiredAt": LocalDateTime
+      "expiredAtEpochSec": long
     }
     ``` 
   → 조회에 불필요한 컬럼까지 매핑되는 ORM 오버헤드를 줄이고 필요한 데이터만 저장
@@ -388,8 +435,10 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 | **MySQL** | 서비스 데이터 저장소 | `shorturl-db` | 3306 |
 | **MongoDB** | 조회 모델 저장소 | `shorturl-mongodb` | 27017 |
 | **Redis** | 캐싱 저장소 | `shorturl-redis` | 6379 |
-| **Kafka**  | 이벤트 브로커 | `shorturl-kafka` | 9092 |
-| **Zookeeper** | Kafka 관리 | `shorturl-zookeeper` | 2181 |
+| **Kafka Broker #1** | 이벤트 브로커 | `shorturl-kafka-1` | 19093 |
+| **Kafka Broker #2** | 이벤트 브로커 | `shorturl-kafka-2` | 19094 |
+| **Kafka Broker #3** | 이벤트 브로커 | `shorturl-kafka-3` | 19095 |
+| **Zookeeper** | Kafka 메타데이터 관리 | `shorturl-zookeeper` | 2181 |
 | **Kafka UI** | 이벤트 모니터링 도구 | `shorturl-kafka-ui` | 8085 |
 
 ### 7.2 실행 방법
@@ -464,7 +513,35 @@ docker-compose down
 | 처리량 | 0.28–4 RPS | **5,200–7,800 RPS** | 수천 배 증가 |
 - **배치에서 생성된 사전 집계 테이블만 단일 조회**하므로 응답 시간이 ms 단위로 단축
 
-### 8.3 산출물
+### 8.3 실행 방법
+
+1. JMeter 설치 및 실행
+    
+    ```
+    cd apache-jmeter-5.6.3/bin
+    ./jmeter
+    ```
+    
+2. Docker 환경 실행
+    
+    ```
+    docker-compose up -d
+    ```
+    
+3. 테스트 플랜 열기
+    - **traffic-generator/** 경로에서 원하는 테스트 `.jmx`파일(test plan) 열기
+    
+    ```
+    traffic-generator/01.baseline/create-url-baseline.jmx
+    traffic-generator/02.redirect-cache-event/redirect-cahce-event.jmx
+    ```
+    
+    - 테스트 수행 전에 **shortKey 파라미터를 수정**
+4. 테스트 실행
+    - JMeter 상단 메뉴에서 **Run ▷ Start** 실행
+    - Summary Report 또는 View Results Tree에서 응답 결과 확인 가능
+
+### 8.4 산출물
 
 ```
 traffic-generator/
@@ -475,17 +552,16 @@ traffic-generator/
        ├── shortkeys_1000.csv
        └── shortkeys_10000.csv
 ```
-- 각 폴더마다 Test Plan과 결과 파일이 저장되어 있습니다.
 
 ---
 
 ## 9. API 명세 (Swagger UI)
 
-각 서비스는 독립적으로 API 명세를 제공합니다. 
+각 서비스는 독립적으로 API 명세를 제공합니다.
 서비스 실행 후 아래 URL에서 확인할 수 있습니다.
 
 **Swagger UI 주소**
 
 - **url-service:** [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)
-- **redirect-service:** [http://localhost:8082/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)
-- **stats-service:** [http://localhost:8083/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)
+- **redirect-service:** [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html)
+- **stats-service:** [http://localhost:8083/swagger-ui/index.html](http://localhost:8083/swagger-ui/index.html)
