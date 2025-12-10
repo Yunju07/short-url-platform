@@ -32,6 +32,8 @@ public class KafkaProducerConfig {
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
         config.put("min.insync.replicas", 2);
+        config.put(ProducerConfig.RETRIES_CONFIG, 5);
+        config.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 300);
 
         return new DefaultKafkaProducerFactory<>(config, new StringSerializer(), serializer);
     }
