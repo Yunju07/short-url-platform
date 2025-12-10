@@ -161,6 +161,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
@@ -192,6 +194,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
@@ -223,6 +227,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
