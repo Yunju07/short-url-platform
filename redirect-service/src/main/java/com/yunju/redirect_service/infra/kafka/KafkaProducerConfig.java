@@ -27,7 +27,7 @@ public class KafkaProducerConfig {
         JsonSerializer<Object> serializer = new JsonSerializer<>(objectMapper);
 
         Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka-1:19095,shorturl-kafka-2:19093,shorturl-kafka-3:19094");
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka-1:19093,shorturl-kafka-2:19094,shorturl-kafka-3:19095");
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "1");
