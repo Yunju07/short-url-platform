@@ -39,8 +39,6 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
@@ -65,14 +63,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - TZ=Asia/Seoul
     networks:
       - shorturl-net
 
+  # ----------------------------
+  # MySQL
+  # ----------------------------
   db:
     image: mysql:8.0
     container_name: shorturl-db
@@ -94,6 +93,9 @@ services:
       timeout: 3s
       retries: 5
 
+  # ----------------------------
+  # Redis
+  # ----------------------------
   redis:
     image: redis:7
     container_name: shorturl-redis
@@ -113,6 +115,9 @@ services:
       timeout: 3s
       retries: 10
 
+  # ----------------------------
+  # Zookeeper
+  # ----------------------------
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
     container_name: shorturl-zookeeper
@@ -128,26 +133,30 @@ services:
     networks:
       - shorturl-net
 
-  kafka:
+  # ----------------------------
+  # Kafka Broker 1
+  # ----------------------------
+  kafka-1:
     image: confluentinc/cp-kafka:7.6.1
-    container_name: shorturl-kafka
+    container_name: shorturl-kafka-1
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "29092:29092"
+      - "9095"
     environment:
       TZ: Asia/Seoul
-      KAFKA_ZOOKEEPER_CONNECT: "shorturl-zookeeper:2181"
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka:9092,PLAINTEXT_HOST://shorturl-kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_BROKER_ID: 1
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: "shorturl-zookeeper:2181"
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19095,PLAINTEXT_HOST://0.0.0.0:9095
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka-1:19095,PLAINTEXT_HOST://localhost:9095
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_NUM_PARTITIONS: 6
-      KAFKA_CREATE_TOPICS: "shorturl.click-log:3:1,shorturl.click-resolve:3:1,shorturl.url-created:3:1"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server=shorturl-kafka:29092" ]
       interval: 10s
@@ -156,7 +165,73 @@ services:
     networks:
       - shorturl-net
 
+  # ----------------------------
+  # Kafka Broker 2
+  # ----------------------------
+  kafka-2:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: shorturl-kafka-2
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093"
+    environment:
+      TZ: Asia/Seoul
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: "shorturl-zookeeper:2181"
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19093,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka-2:19093,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_NUM_PARTITIONS: 6
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server=shorturl-kafka:29092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shorturl-net
+
+  # ----------------------------
+  # Kafka Broker 3
+  # ----------------------------
+  kafka-3:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: shorturl-kafka-3
+    depends_on:
+      - zookeeper
+    ports:
+      - "9094"
+    environment:
+      TZ: Asia/Seoul
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: "shorturl-zookeeper:2181"
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19094,PLAINTEXT_HOST://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://shorturl-kafka-3:19094,PLAINTEXT_HOST://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_NUM_PARTITIONS: 6
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server=shorturl-kafka:29092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shorturl-net
+
+  # ----------------------------
   # Kafka UI
+  # ----------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -164,13 +239,18 @@ services:
       - "9000:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: shorturl-kafka:29092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: shorturl-kafka-1:19092,shorturl-kafka-2:19093,shorturl-kafka-3:19094
       KAFKA_CLUSTERS_0_ZOOKEEPER: shorturl-zookeeper:2181
     depends_on:
-      - kafka
+      - kafka-1
+      - kafka-2
+      - kafka-3
     networks:
       - shorturl-net
 
+  # ----------------------------
+  # MongoDB
+  # ----------------------------
   mongo:
     image: mongo:6.0
     container_name: shorturl-mongo
