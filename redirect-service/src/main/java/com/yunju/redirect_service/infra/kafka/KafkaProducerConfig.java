@@ -27,10 +27,17 @@ public class KafkaProducerConfig {
         JsonSerializer<Object> serializer = new JsonSerializer<>(objectMapper);
 
         Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka:29092");
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka-1:19093,shorturl-kafka-2:19094,shorturl-kafka-3:19095");
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.ACKS_CONFIG, "1");
+        config.put("min.insync.replicas", 1);
+        config.put(ProducerConfig.RETRIES_CONFIG, 2);
+        config.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 100);
+
+        config.put(ProducerConfig.LINGER_MS_CONFIG, 5);
+        config.put(ProducerConfig.BATCH_SIZE_CONFIG, 32_768);
+
 
         return new DefaultKafkaProducerFactory<>(config, new StringSerializer(), serializer);
     }
@@ -38,5 +45,24 @@ public class KafkaProducerConfig {
     @Bean
     public KafkaTemplate<String, Object> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
+    }
+
+    @Bean
+    public ProducerFactory<String, Object> dlqProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                "shorturl-kafka-1:19093,shorturl-kafka-2:19094,shorturl-kafka-3:19095");
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.RETRIES_CONFIG, 5);
+        config.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 200);
+
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> dlqKafkaTemplate() {
+        return new KafkaTemplate<>(dlqProducerFactory());
     }
 }

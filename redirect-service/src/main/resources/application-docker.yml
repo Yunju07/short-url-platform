@@ -1,4 +1,19 @@
 spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 180000
+      validation-timeout: 5000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
   data:
     redis:
       host: shorturl-redis
@@ -8,9 +23,9 @@ spring:
       uri: mongodb://shorturl-mongo:27017/shorturl
 
   kafka:
-    bootstrap-servers: shorturl-kafka:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
-      bootstrap-servers: shorturl-kafka:29092
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
       group-id: redirect-consumer
       auto-offset-reset: earliest
       enable-auto-commit: false
@@ -19,7 +34,12 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
     producer:
-      bootstrap-servers: shorturl-kafka:29092
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+      acks: all
+      retries: 2147483647
+      properties:
+        delivery.timeout.ms: 120000
+        max.in.flight.requests.per.connection: 5
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     listener:

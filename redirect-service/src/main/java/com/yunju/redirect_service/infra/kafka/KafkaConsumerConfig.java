@@ -1,27 +1,36 @@
 package com.yunju.redirect_service.infra.kafka;
 
 import com.yunju.redirect_service.global.event.dto.ShortUrlCreatedEvent;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@RequiredArgsConstructor
 public class KafkaConsumerConfig {
+
+    private final KafkaTemplate<String, Object> dlqKafkaTemplate;
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, ShortUrlCreatedEvent> kafkaListenerContainerFactory() {
 
         Map<String, Object> props = new HashMap<>();
 
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka:29092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka-1:19093,shorturl-kafka-2:19094,shorturl-kafka-3:19095");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "redirect-consumer");
 
         props.put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "classic");
@@ -54,7 +63,16 @@ public class KafkaConsumerConfig {
         container.setConcurrency(3);
         container.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
 
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                dlqKafkaTemplate,
+                (record, ex) -> new TopicPartition("shorturl.url-created.dlq", record.partition())
+        );
+
+        DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler(recoverer, new FixedBackOff(5000L, 5));
+
+        container.setCommonErrorHandler(errorHandler);
+
         return container;
     }
-
 }
