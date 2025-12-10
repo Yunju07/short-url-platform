@@ -162,7 +162,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka1_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
@@ -195,7 +195,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka2_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
@@ -228,7 +228,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka3_data:/var/lib/kafka/data
     networks:
       - shorturl-net
 
@@ -294,7 +294,9 @@ networks:
 
 volumes:
   db-data:
-  kafka_data:
+  kafka1_data:
+  kafka2_data:
+  kafka3_data:
   zookeeper_data:
   zookeeper_log:
   mongo_data:
