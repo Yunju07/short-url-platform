@@ -446,10 +446,15 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 프로젝트 루트 경로에서 아래 명령을 실행합니다.
 
 ```bash
-# 전체 컨테이너 실행
+# 초기 1회 실행 (docker-init 프로필로 테이블 자동 생성)
+docker-compose -f docker-compose.yml -f docker-compose-init.yml up -d
+
+# 재실행: 전체 컨테이너 실행
 docker-compose up -d
+
 # 로그 확인
 docker-compose logs -f
+
 # 전체 종료 및 중지
 docker-compose down
 ```
