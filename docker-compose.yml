@@ -104,7 +104,7 @@ services:
     command: [
       "redis-server",
       "--appendonly", "yes",
-      "--maxmemory", "256mb",
+      "--maxmemory", "2gb",
       "--maxmemory-policy", "allkeys-lru"
     ]
     ports:
