@@ -37,19 +37,35 @@ public class RedirectService {
 
         LocalDateTime clickTime = LocalDateTime.now();
 
-        String originalUrl = getOriginalUrl(shortKey);
+        try {
+            String originalUrl = getOriginalUrl(shortKey);
 
-        clickLogEventProducer.send(
-                shortKey,
-                buildShortUrl(shortKey),
-                originalUrl,
-                userAgent,
-                referrer,
-                clickTime);
+            // 정상 클릭 로그
+            clickLogEventProducer.send(
+                    shortKey,
+                    buildShortUrl(shortKey),
+                    originalUrl,
+                    userAgent,
+                    referrer,
+                    clickTime);
 
-        clickResolveEventProducer.send(shortKey, clickTime);
+            clickResolveEventProducer.send(shortKey, clickTime);
 
-        return originalUrl;
+            return originalUrl;
+
+        } catch (CustomApiException e) {
+            // 리다이렉트 실패 시에도 로그 기록
+            log.info("[Redirect Fail] shortKey={} click-log save.", shortKey);
+            clickLogEventProducer.send(
+                    shortKey,
+                    "",
+                    "",
+                    userAgent,
+                    referrer,
+                    clickTime
+            );
+            throw e;
+        }
     }
 
     private String buildShortUrl(String shortKey) {
