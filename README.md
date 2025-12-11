@@ -568,6 +568,8 @@ traffic-generator/
        └── shortkeys_10000.csv
 ```
 
+각 테스트별로 Test Plan과 결과 파일(summay.csv, aggreate.csv)을 확인할 수 있습니다.
+
 ---
 
 ## 9. API 명세 (Swagger UI)
