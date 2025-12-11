@@ -221,7 +221,7 @@ Outbox 방식은 메시지 전달을 보장한다는 장점이 있지만, 조회
 
 많은 양의 조회와 반복되는 Hot Key 요청을 캐시로 처리하여, 응답 속도를 높이고 DB 부하를 줄이기 위함입니다.
 
-> 단순 Key-Value 캐싱부터 만료 정책 관리까지 안정적으로 지원하고, 
+> 단순 Key-Value를 포함한 다양한 자료구조를 지원하며, 
 운영 경험과 생태계가 충분히 확보된 인메모리 저장소이기 때문에 Redis를 선택했습니다.
 > 
 
@@ -248,8 +248,8 @@ Outbox 방식은 메시지 전달을 보장한다는 장점이 있지만, 조회
 
 ### 4.3 TTL
 
-비즈니스 만료 정책과 Redis TTL을 유사하게 설정하여 URL과 캐시의 만료 흐름을 동일하게 유지하였습니다.
-또한, 만료 직후 발생할 수 있는 대량의 DB 조회(스탬피드)를 방지하기 위해,  Redis TTL은 expiredAt보다 일정 시간 더 길게 유지합니다.
+비즈니스 만료 정책과 Redis TTL을 유사하게 설정하여 **URL과 캐시의 만료 흐름을 동일하게 유지**하였습니다.
+또한, 만료 직후 발생할 수 있는 대량의 **DB 조회(스탬피드)를 방지**하기 위해,  Redis TTL은 expiredAt보다 일정 시간 더 길게 유지합니다.
 
 - **TTL = (expiredAt – 현재 시각) + 버퍼 시간(60초)**
 
@@ -565,3 +565,33 @@ traffic-generator/
 - **url-service:** [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)
 - **redirect-service:** [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html)
 - **stats-service:** [http://localhost:8083/swagger-ui/index.html](http://localhost:8083/swagger-ui/index.html)
+
+---
+
+## 10. 확장 전략
+
+### 10.1 인프라 고도화
+
+**① 모듈별 스케일링**
+
+현재는 서비스 간 분리와 확장 가능한 구조 설계에 집중하여 모듈별 독립적인 스케일링이 가능한 기반을 마련하였습니다. 앞으로 실제 부하 테스트를 통해 각 서비스의 처리량/자원 사용량 등의 지표를 수집하고, 이를 바탕으로 서비스별 인스턴스 수와 확장 전략을 최적화할 계획입니다.
+
+**② MySQL 이중화**
+
+현재는 단일 MySQL 인스턴스만으로 구성되어 있습니다. 향후 읽기 전용 Replica를 도입하여, 집계용 대량 읽기 트래픽을 분산시킬 수 있습니다. 
+
+### 10.2 이벤트 통신 고도화
+
+**① DLQ 기반 자동 재처리 파이프라인**
+
+현재는 카프카 DLQ를 수동 보정 및 모니터링 용도로 마련하였습니다. 향후, DLQ를 기반으로 **재처리 파이프라인**을 구축할 수 있습니다. 실패 원인을 함께 수집하여, 원인별 재처리 정책을 마련할 수 있습니다.
+
+**② Consumer Lag 모니터링 및 자동 Scale-out**
+
+현재는 Kafka consumer-group의 Lag이 시스템 병목의 지표가 됩니다. 향후에는 Lag 증가 시, stats-service 인스턴스 자동 scale-out 전략을 사용할 수 있습니다. 
+
+### 10.3 캐시 운영 고도화
+
+**① 캐시 TTL 정책 개선** 
+
+현재는 TTL 버퍼를 고정값으로 사용하고 있습니다. 향후에는 운영 데이터에 기반하여 조정할 수 있습니다. ex) 인기있는 key는 더 긴 버퍼 부여
