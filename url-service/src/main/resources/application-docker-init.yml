@@ -12,19 +12,28 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
-
+      ddl-auto: create
+ 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
       bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-      group-id: stats-consumer
+      group-id: url-consumer
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+    producer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+      acks: all
+      retries: 2147483647
+      properties:
+        delivery.timeout.ms: 120000
+        max.in.flight.requests.per.connection: 5
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     listener:
       ack-mode: BATCH
       concurrency: 1
@@ -32,7 +41,3 @@ spring:
 springdoc:
   api-docs.enabled: true
   swagger-ui.enabled: true
-
-stats:
-  batch:
-    interval-ms: 600000
