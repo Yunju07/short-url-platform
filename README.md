@@ -439,7 +439,7 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 | **Kafka Broker #2** | 이벤트 브로커 | `shorturl-kafka-2` | 19094 |
 | **Kafka Broker #3** | 이벤트 브로커 | `shorturl-kafka-3` | 19095 |
 | **Zookeeper** | Kafka 메타데이터 관리 | `shorturl-zookeeper` | 2181 |
-| **Kafka UI** | 이벤트 모니터링 도구 | `shorturl-kafka-ui` | 8085 |
+| **Kafka UI** | 이벤트 모니터링 도구 | `shorturl-kafka-ui` | 9000 |
 
 → 향후 인증·인가, 트래픽 제어, 라우팅 기능을 제공하는 **Gateway 모듈**을 도입할 가능성을 고려하여, 기본 포트인 8080은 비워두도록 구성했습니다.
 
