@@ -26,7 +26,8 @@
 본 시스템은 기능별 책임 경계를 기준으로 서비스를 분리하여 독립적인 배포·확장 구조를 갖도록 설계하였습니다. 각 서비스는 API 목적, 처리 방식, 데이터 저장 형태가 명확히 구분되며, 서비스 간 통신은 **Kafka 기반 비동기 메시징**을 중심으로 이루어집니다.
 
 ### 2.1 전체 아키텍처
-<img width="1888" height="1166" alt="스크린샷 2025-12-06 오후 10 56 41" src="https://github.com/user-attachments/assets/b65cf6e3-9c70-4d7c-826b-432c0ca762fb" />
+
+<img width="1888" height="1166" alt="전체 아키텍처" src="https://github.com/user-attachments/assets/5ab594ae-2a56-413d-9e18-5dc2e08300ef" />
 
 ### 2.2 서비스 모듈 구성
 
@@ -140,14 +141,12 @@ MSA 구조에서 서비스 간 결합을 최소화하고 장애 전파를 제어
 
 ### 3.2 이벤트 처리 과정 (다이어그램)
 
-<img width="4732" height="2726" alt="EDA1" src="https://github.com/user-attachments/assets/113b423a-9f47-4d42-a337-b56a6cb04bc1" />
-
+<img width="1935" height="1071" alt="EDA1" src="https://github.com/user-attachments/assets/ddb8410c-0890-4df4-bc91-1d8b99faf3e5" />
 
 - 리다이렉트 요청 처리와 데이터 적재 시점을 분리하여 **응답 속도를 향상**
 - 클릭을 저장하고 처리하는 과정에서 발생할 수 있는 **장애가 리다이렉트 요청에 영향을 주지 않도록 분리**
 
-<img width="1846" height="1027" alt="EDA2" src="https://github.com/user-attachments/assets/463822e6-cd39-4b8d-8992-3b81a26680d8" />
-
+<img width="1846" height="1027" alt="EDA2" src="https://github.com/user-attachments/assets/3bdae3c0-713e-4e5a-bbe8-db3bed244144" />
 
 - 조회 성능을 높이기 위한 **캐시 저장소**는 리다이렉트에서 온전히 관리하도록 책임 분리
 - **CQRS 패턴**: 조회 모델과 커맨드 모델 간 데이터 동기화
@@ -186,7 +185,7 @@ Kafka 메세지 유실 가능성을 낮추기 위해 브로커를 3개로 구성
 - Topics 메뉴에서 dlq 검색
 - kafka-ui: [http://localhost:9000](http://localhost:9000/)
 
-<img width="808" height="281" alt="image" src="https://github.com/user-attachments/assets/7b56cd4f-1e7d-4287-a039-b76762321b13" />
+<img width="796" height="303" alt="kafka-ui dlq" src="https://github.com/user-attachments/assets/6ac42252-3c44-4980-87e5-90fd295ee0d4" />
 
 
 **3) URL 생성 이벤트의 지연/유실 시 대응 전략**
@@ -206,7 +205,8 @@ Outbox 방식은 메시지 전달을 보장한다는 장점이 있지만, 조회
 
 반면 DB fallback 방식은 MongoDB에 데이터가 아직 반영되지 않은 상태에서도 MySQL 기준으로 데이터를 조회한 뒤 MongoDB를 보정할 수 있어 **서비스 응답 성공률과 실시간성 측면에서 안정적입니다.**
 
-<img width="1000" alt="DB fallback" src="https://github.com/user-attachments/assets/685c1371-6bf2-4d69-a60f-f83a314db003" />
+<img width="1806" height="932" alt="DB fallback" src="https://github.com/user-attachments/assets/336da142-9074-437d-86fb-cdd3a5d1b51b" />
+
 
 **4) 클릭 로그 수집**
 
