@@ -192,7 +192,7 @@ Kafka 메세지 유실 가능성을 낮추기 위해 브로커를 3개로 구성
 
 URL 생성 이벤트가 Kafka 구간에서 유실되거나 지연되면, 리다이렉트 서비스는 해당 shortKey를 조회할 때 MongoDB에 데이터가 없는 상태를 맞이할 수 있습니다. 이 문제를 해결하기 위해 **Outbox 방식과 DB Fallback 방식**을 고려하였습니다.
 
-| 구분 | **Outbox 방식** | **DB Fallback 방식**  |
+| 구분 | **Outbox 방식** | **DB Fallback 방식** ✅ |
 | --- | --- | --- |
 | **데이터 흐름** | MySQL 저장 → Outbox 기록 → 스케줄러 → Kafka → Mongo 업데이트 | Mongo 조회 → 없으면 MySQL 조회 → Mongo에 upsert(Self-healing) |
 | **실시간성** | **낮음** (Mongo 업데이트가 스케줄러 + Kafka 소비 이후 반영됨) | 높음 (Mongo miss여도 MySQL로 즉시 처리) |
@@ -203,7 +203,7 @@ URL 생성 이벤트가 Kafka 구간에서 유실되거나 지연되면, 리다�
 
 Outbox 방식은 메시지 전달을 보장한다는 장점이 있지만, 조회 모델 업데이트 시점이 Kafka 처리 상태에 의존하게 되어 초기 요청 처리 성능이 저하될 수 있습니다.
 
-반면 DB fallback 방식은 MongoDB에 데이터가 아직 반영되지 않은 상태에서도 MySQL 기준으로 데이터를 조회한 뒤 MongoDB를 보정할 수 있어 **서비스 응답 성공률과 실시간성 측면에서 안정적입니다.**
+반면 DB fallback 방식은 MongoDB에 데이터가 아직 반영되지 않은 상태에서도 MySQL 기준으로 데이터를 조회한 뒤 MongoDB를 보정할 수 있어 **서비스 응답 성공률과 실시간성 측면에서 안정적입니다.** 따라서 DB Fallback 방식을 채택했습니다.
 
 <img width="1806" height="932" alt="DB fallback" src="https://github.com/user-attachments/assets/336da142-9074-437d-86fb-cdd3a5d1b51b" />
 
