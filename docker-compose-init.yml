@@ -105,7 +105,7 @@ services:
       "redis-server",
       "--appendonly", "yes",
       "--maxmemory", "2gb",
-      "--maxmemory-policy", "allkeys-lru"
+      "--maxmemory-policy", "allkeys-lfu"
     ]
     ports:
       - "6379:6379"
