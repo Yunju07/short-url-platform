@@ -13,3 +13,14 @@ spring:
 springdoc:
   api-docs.enabled: true
   swagger-ui.enabled: true
+
+shortkey:
+  length: 6
+  alphabet: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  max-unique-attempts: 5
+  llm:
+    enabled: true
+    base-url: "http://localhost:11434"
+    model: "llama3.1"
+    timeout-seconds: 2
+    max-attempts: 3
