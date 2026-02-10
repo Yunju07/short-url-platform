@@ -436,11 +436,18 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 | **MySQL** | 서비스 데이터 저장소 | `shorturl-db` | 3306 |
 | **MongoDB** | 조회 모델 저장소 | `shorturl-mongodb` | 27017 |
 | **Redis** | 캐싱 저장소 | `shorturl-redis` | 6379 |
+| **Ollama** | LLM 서버 | `shorturl-ollama` | 11434 |
 | **Kafka Broker #1** | 이벤트 브로커 | `shorturl-kafka-1` | 19093 |
 | **Kafka Broker #2** | 이벤트 브로커 | `shorturl-kafka-2` | 19094 |
 | **Kafka Broker #3** | 이벤트 브로커 | `shorturl-kafka-3` | 19095 |
 | **Zookeeper** | Kafka 메타데이터 관리 | `shorturl-zookeeper` | 2181 |
 | **Kafka UI** | 이벤트 모니터링 도구 | `shorturl-kafka-ui` | 9000 |
+| **Mongo Express** | MongoDB 관리 UI | `shorturl-mongo-express` | 8090 |
+
+**관리 UI 접속 주소**
+- `Kafka UI`: http://localhost:9000
+- `Mongo Express`: http://localhost:8090
+- Swagger UI 주소는 [9번 섹션](#9-api-명세-swagger-ui) 참고
 
 → 향후 인증·인가, 트래픽 제어, 라우팅 기능을 제공하는 **Gateway 모듈**을 도입할 가능성을 고려하여, 기본 포트인 8080은 비워두도록 구성했습니다.
 
@@ -460,6 +467,42 @@ docker-compose logs -f
 
 # 전체 종료 및 중지
 docker-compose down
+```
+
+### 7.3 LLM 포함 compose 실행 가이드
+
+LLM(Ollama)을 포함해 실행할 때는 `compose/app.env`에서 모델과 타임아웃 설정을 관리합니다.
+
+```bash
+# LLM 설정 값 수정
+compose/app.env
+```
+
+**예시 설정**
+
+```
+LLM_ENABLED=true
+LLM_BASE_URL=http://ollama:11434
+LLM_MODEL=llama3.1
+LLM_TIMEOUT_SECONDS=2
+LLM_MAX_ATTEMPTS=3
+```
+
+**실행 방법**
+
+```bash
+# 초기 1회 실행 (DB init + LLM 모델 pull)
+docker-compose -f docker-compose.yml -f docker-compose-init.yml up -d
+
+# 재실행
+docker-compose up -d
+```
+
+- `ollama-init` 컨테이너가 `LLM_MODEL`을 pull하고 종료됩니다.
+- 모델을 변경했을 때는 아래처럼 `ollama-init`만 다시 실행하면 됩니다.
+
+```bash
+docker-compose up -d ollama-init
 ```
 
 ---

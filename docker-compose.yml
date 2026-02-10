@@ -17,6 +17,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - TZ=Asia/Seoul
@@ -116,6 +118,30 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # ----------------------------
+  # Ollama (LLM)
+  # ----------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: shorturl-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - shorturl-net
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: shorturl-ollama-init
+    depends_on:
+      - ollama
+    env_file:
+      - ./compose/app.env
+    entrypoint: ["sh", "-c", "sleep 2 && OLLAMA_HOST=$$LLM_BASE_URL ollama pull $$LLM_MODEL"]
+    networks:
+      - shorturl-net
 
   # ----------------------------
   # Zookeeper
@@ -302,3 +328,4 @@ volumes:
   zookeeper_data:
   zookeeper_log:
   mongo_data:
+  ollama_data:

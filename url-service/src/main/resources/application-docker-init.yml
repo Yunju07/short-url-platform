@@ -41,3 +41,14 @@ spring:
 springdoc:
   api-docs.enabled: true
   swagger-ui.enabled: true
+
+shortkey:
+  length: 6
+  alphabet: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  max-unique-attempts: 5
+  llm:
+    enabled: ${LLM_ENABLED:true}
+    base-url: ${LLM_BASE_URL:http://ollama:11434}
+    model: ${LLM_MODEL:phi3:mini}
+    timeout-seconds: ${LLM_TIMEOUT_SECONDS:2}
+    max-attempts: ${LLM_MAX_ATTEMPTS:3}
