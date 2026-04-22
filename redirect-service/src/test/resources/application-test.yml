@@ -17,3 +17,5 @@ spring:
 
 shorturl:
   domain: https://short.example.com
+  kafka:
+    topic-replicas: 1
