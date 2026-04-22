@@ -15,6 +15,28 @@ jobs:
   ci:
     name: CI (Gradle build)
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: shorturl
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +51,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Test (clean test)
+        env:
+          SPRING_PROFILES_ACTIVE: test
         run: ./gradlew clean test --no-daemon
 
   cd:
