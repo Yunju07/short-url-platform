@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/shorturl?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: none
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+    mongodb:
+      database: shorturl_test
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+
+shorturl:
+  domain: https://short.example.com
+  kafka:
+    topic-replicas: 1
