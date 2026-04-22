@@ -16,3 +16,7 @@ spring:
 stats:
   batch:
     interval-ms: 600000
+
+shorturl:
+  kafka:
+    topic-replicas: 1
