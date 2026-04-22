@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -24,13 +25,15 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     private final KafkaTemplate<String, Object> dlqKafkaTemplate;
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, ClickResolveEvent> kafkaListenerContainerFactory() {
 
         Map<String, Object> props = new HashMap<>();
 
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "shorturl-kafka-1:19093,shorturl-kafka-2:19094,shorturl-kafka-3:19095");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "url-consumer");
 
         props.put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "classic");

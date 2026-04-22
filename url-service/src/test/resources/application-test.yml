@@ -12,3 +12,7 @@ spring:
       port: 6379
   kafka:
     bootstrap-servers: 127.0.0.1:9092
+
+shorturl:
+  kafka:
+    topic-replicas: 1
