@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # AI service settings
     provider: str = Field(default="ollama", validation_alias="AI_PROVIDER")
-    timeout_seconds: float = Field(default=10.0, validation_alias="AI_TIMEOUT_SECONDS")
+    timeout_seconds: float = Field(default=30.0, validation_alias="AI_TIMEOUT_SECONDS")
     max_attempts: int = Field(default=3, validation_alias="AI_MAX_ATTEMPTS")
 
     # Ollama provider settings
@@ -14,4 +14,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

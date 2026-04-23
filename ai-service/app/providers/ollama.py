@@ -13,7 +13,17 @@ class OllamaClient:
 
     async def generate(self, prompt: str) -> str:
         url = f"{self._base_url}/api/generate"
-        payload = {"model": self._model, "prompt": prompt, "stream": False}
+        # Keep the response short and stop at the first newline to avoid slow generations.
+        payload = {
+            "model": self._model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "num_predict": 32,
+                "temperature": 0.2,
+                "stop": ["\n"],
+            },
+        }
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             res = await client.post(url, json=payload)
@@ -22,4 +32,3 @@ class OllamaClient:
         data = res.json()
         # Ollama returns: { model, created_at, response, done, ... }
         return (data.get("response") or "").strip()
-
