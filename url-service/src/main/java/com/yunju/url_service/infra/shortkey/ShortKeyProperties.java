@@ -8,7 +8,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Setter
 @ConfigurationProperties(prefix = "shortkey")
 public class ShortKeyProperties {
-    private int length = 6;
-    private String alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private int minLength = 6;
+    private int maxLength = 8;
+    // Policy: lowercase + [a-z0-9]
+    private String alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
     private int maxUniqueAttempts = 5;
+
+    private Ai ai = new Ai();
+
+    @Getter
+    @Setter
+    public static class Ai {
+        private boolean enabled = true;
+        private String baseUrl = "http://localhost:8000";
+        private int timeoutSeconds = 2;
+        private int maxAttempts = 3;
+    }
 }

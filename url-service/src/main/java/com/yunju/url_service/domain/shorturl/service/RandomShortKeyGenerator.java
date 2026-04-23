@@ -13,7 +13,8 @@ public class RandomShortKeyGenerator implements ShortKeyGenerator {
     private final Random random = new Random();
 
     public RandomShortKeyGenerator(ShortKeyProperties properties) {
-        this.length = properties.getLength();
+        // Default fallback length uses the minimum length.
+        this.length = properties.getMinLength();
         this.alphabet = properties.getAlphabet();
     }
 

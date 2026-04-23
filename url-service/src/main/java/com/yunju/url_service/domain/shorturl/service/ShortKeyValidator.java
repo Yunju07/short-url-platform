@@ -8,11 +8,13 @@ import java.util.Set;
 
 @Component
 public class ShortKeyValidator {
-    private final int length;
+    private final int minLength;
+    private final int maxLength;
     private final Set<Character> allowedChars;
 
     public ShortKeyValidator(ShortKeyProperties properties) {
-        this.length = properties.getLength();
+        this.minLength = properties.getMinLength();
+        this.maxLength = properties.getMaxLength();
         this.allowedChars = new HashSet<>();
         for (char c : properties.getAlphabet().toCharArray()) {
             allowedChars.add(c);
@@ -20,7 +22,12 @@ public class ShortKeyValidator {
     }
 
     public boolean isValid(String key) {
-        if (key == null || key.length() != length) {
+        if (key == null) {
+            return false;
+        }
+
+        int len = key.length();
+        if (len < minLength || len > maxLength) {
             return false;
         }
 
