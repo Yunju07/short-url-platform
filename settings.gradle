@@ -1,4 +1,4 @@
-rootProject.name = '2025-externship-be-Yunju07'
+rootProject.name = 'short-url-platform'
 
 include "common"
 include "url-service"

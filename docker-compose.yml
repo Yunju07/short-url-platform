@@ -17,7 +17,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
+      ai-service:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -69,6 +69,26 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Seoul
+    networks:
+      - shorturl-net
+
+  # ----------------------------
+  # ai-service (8000)
+  # ----------------------------
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./compose/app.env
+    depends_on:
+      ollama:
+        condition: service_started
+    environment:
       - TZ=Asia/Seoul
     networks:
       - shorturl-net
@@ -139,7 +159,7 @@ services:
       - ollama
     env_file:
       - ./compose/app.env
-    entrypoint: ["sh", "-c", "sleep 2 && OLLAMA_HOST=$$LLM_BASE_URL ollama pull $$LLM_MODEL"]
+    entrypoint: ["sh", "-c", "sleep 2 && OLLAMA_HOST=$$OLLAMA_BASE_URL ollama pull $$OLLAMA_MODEL"]
     networks:
       - shorturl-net
 
