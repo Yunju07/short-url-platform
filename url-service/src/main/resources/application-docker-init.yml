@@ -41,3 +41,14 @@ spring:
 springdoc:
   api-docs.enabled: true
   swagger-ui.enabled: true
+
+shortkey:
+  min-length: 6
+  max-length: 8
+  alphabet: "0123456789abcdefghijklmnopqrstuvwxyz"
+  max-unique-attempts: 5
+  ai:
+    enabled: ${AI_ENABLED:true}
+    base-url: ${AI_BASE_URL:http://ai-service:8000}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:2}
+    max-attempts: ${AI_MAX_ATTEMPTS:3}

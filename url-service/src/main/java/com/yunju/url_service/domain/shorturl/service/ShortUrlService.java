@@ -14,9 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.yunju.url_service.infra.shortkey.ShortKeyProperties;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -25,10 +26,11 @@ public class ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final UrlCreatedEventProducer urlCreatedEventProducer;
+    private final ShortKeyGenerator shortKeyGenerator;
+    private final ShortKeyValidator shortKeyValidator;
+    private final ShortKeyProperties shortKeyProperties;
 
     private static final Long DEFAULT_TTL = 2592000L; // 30일
-    private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int SHORT_KEY_LENGTH = 6;
     private static final String SHORT_URL_DOMAIN = "https://short.example.com";
 
     public ShortUrlCreateResponse createShortUrl(ShortUrlCreateRequest request) {
@@ -51,7 +53,7 @@ public class ShortUrlService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiredAt = now.plusSeconds(ttl);
 
-        String shortKey = generateShortKey();
+        String shortKey = generateShortKey(request.originalUrl());
         String shortUrl = buildFullShortUrl(shortKey);
 
         ShortUrl entity = ShortUrl.builder()
@@ -94,15 +96,20 @@ public class ShortUrlService {
         );
     }
 
-    private String generateShortKey() {
-        Random random = new Random();
-        StringBuilder sb = new StringBuilder(SHORT_KEY_LENGTH);
+    private String generateShortKey(String originalUrl) {
+        int attempts = Math.max(1, shortKeyProperties.getMaxUniqueAttempts());
+        for (int i = 0; i < attempts; i++) {
+            String candidate = shortKeyGenerator.generate(originalUrl);
+            if (!shortKeyValidator.isValid(candidate)) {
+                continue;
+            }
 
-        for (int i = 0; i < SHORT_KEY_LENGTH; i++) {
-            sb.append(BASE62.charAt(random.nextInt(BASE62.length())));
+            if (shortUrlRepository.findByShortKey(candidate).isEmpty()) {
+                return candidate;
+            }
         }
 
-        return sb.toString();
+        throw new CustomApiException(ErrorStatus.INTERNAL_SERVER_ERROR);
     }
 
     private String buildFullShortUrl(String key) {
