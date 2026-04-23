@@ -430,18 +430,19 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 
 | 구성 | 역할 | 컨테이너 이름 | 호스트 포트 |
 | --- | --- | --- | --- |
-| **url-service** | 단축 URL 생성 API | `shorturl-url-service` | 8081 |
-| **redirect-service** | 단축 URL 리다이렉트 API | `shorturl-redirect-service` | 8082 |
-| **stats-service** | 통계 조회 API | `shorturl-stats-service` | 8083 |
+| **url-service** | 단축 URL 생성 API | `url-service` | 8081 |
+| **redirect-service** | 단축 URL 리다이렉트 API | `redirect-service` | 8082 |
+| **stats-service** | 통계 조회 API | `stats-service` | 8083 |
+| **ai-service** | 표준 AI API(ShortKey 생성) | `ai-service` | 8000 |
 | **MySQL** | 서비스 데이터 저장소 | `shorturl-db` | 3306 |
-| **MongoDB** | 조회 모델 저장소 | `shorturl-mongodb` | 27017 |
+| **MongoDB** | 조회 모델 저장소 | `shorturl-mongo` | 27017 |
 | **Redis** | 캐싱 저장소 | `shorturl-redis` | 6379 |
-| **Ollama** | LLM 서버 | `shorturl-ollama` | 11434 |
+| **Ollama** | LLM Provider(로컬 모델 서버) | `shorturl-ollama` | 11434 |
 | **Kafka Broker #1** | 이벤트 브로커 | `shorturl-kafka-1` | 19093 |
 | **Kafka Broker #2** | 이벤트 브로커 | `shorturl-kafka-2` | 19094 |
 | **Kafka Broker #3** | 이벤트 브로커 | `shorturl-kafka-3` | 19095 |
 | **Zookeeper** | Kafka 메타데이터 관리 | `shorturl-zookeeper` | 2181 |
-| **Kafka UI** | 이벤트 모니터링 도구 | `shorturl-kafka-ui` | 9000 |
+| **Kafka UI** | 이벤트 모니터링 도구 | `kafka-ui` | 9000 |
 | **Mongo Express** | MongoDB 관리 UI | `shorturl-mongo-express` | 8090 |
 
 **관리 UI 접속 주소**
@@ -457,52 +458,65 @@ CQRS 기반으로 리다이렉트 조회 부하는 RDB에서 성공적으로 분
 
 ```bash
 # 초기 1회 실행 (docker-init 프로필로 테이블 자동 생성)
-docker-compose -f docker-compose.yml -f docker-compose-init.yml up -d
+docker compose -f docker-compose.yml -f docker-compose-init.yml up -d --build
 
 # 재실행: 전체 컨테이너 실행
-docker-compose up -d
+docker compose up -d
 
 # 로그 확인
-docker-compose logs -f
+docker compose logs -f
 
 # 전체 종료 및 중지
-docker-compose down
+docker compose down
 ```
 
-### 7.3 LLM 포함 compose 실행 가이드
-
-LLM(Ollama)을 포함해 실행할 때는 `compose/app.env`에서 모델과 타임아웃 설정을 관리합니다.
+환경 변수(`compose/app.env`)를 변경한 경우, 이미 떠 있는 컨테이너에는 자동 반영되지 않을 수 있습니다.
+이때는 아래처럼 컨테이너를 재생성해서 반영합니다.
 
 ```bash
-# LLM 설정 값 수정
+docker compose up -d --force-recreate url-service ai-service
+```
+
+### 7.3 AI/LLM 포함 compose 실행 가이드
+
+본 프로젝트의 shortKey 생성은 `url-service -> ai-service -> (Ollama/vLLM...)` 구조로 동작합니다.
+모델/Provider 설정은 `compose/app.env`에서 관리합니다.
+
+```bash
+# AI/LLM 설정 값 수정
 compose/app.env
 ```
 
 **예시 설정**
 
 ```
-LLM_ENABLED=true
-LLM_BASE_URL=http://ollama:11434
-LLM_MODEL=llama3.1
-LLM_TIMEOUT_SECONDS=2
-LLM_MAX_ATTEMPTS=3
+# url-service -> ai-service
+AI_ENABLED=true
+AI_BASE_URL=http://ai-service:8000
+AI_TIMEOUT_SECONDS=20
+AI_MAX_ATTEMPTS=3
+
+# ai-service provider settings (ai-service -> ollama)
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_MODEL=phi3:mini
 ```
 
 **실행 방법**
 
 ```bash
-# 초기 1회 실행 (DB init + LLM 모델 pull)
-docker-compose -f docker-compose.yml -f docker-compose-init.yml up -d
+# 초기 1회 실행 (DB init + 모델 pull)
+docker compose -f docker-compose.yml -f docker-compose-init.yml up -d --build
 
 # 재실행
-docker-compose up -d
+docker compose up -d
 ```
 
-- `ollama-init` 컨테이너가 `LLM_MODEL`을 pull하고 종료됩니다.
+- `ollama-init` 컨테이너가 `OLLAMA_MODEL`을 pull하고 종료됩니다.
 - 모델을 변경했을 때는 아래처럼 `ollama-init`만 다시 실행하면 됩니다.
 
 ```bash
-docker-compose up -d ollama-init
+docker compose up -d ollama-init
 ```
 
 ---
